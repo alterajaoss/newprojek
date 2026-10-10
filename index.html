@@ -1,0 +1,3488 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="color-scheme" content="dark">
+    <!--PWA-HEAD-START-->
+    <meta name="theme-color" content="#0a0a17">
+    <meta name="application-name" content="iWallet">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="iWallet">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <!--PWA-HEAD-END-->
+    <title>iWallet - Tracker Pengeluaran Remaja</title>
+    <!-- Konfigurasi Firebase (login Google + sinkronisasi). Isi di firebase-config.js -->
+    <script src="firebase-config.js"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Google Fonts Plus Jakarta Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Glassmorphism Core Styling */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+        }
+
+        .glass-card-dark {
+            background: rgba(18, 18, 28, 0.65);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.35);
+        }
+
+        .glass-pill {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+        .glass-modal {
+            background: rgba(15, 15, 26, 0.94);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 10px;
+        }
+
+        /* Animated Blob BG */
+        @keyframes blob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0px, 0px) scale(1); }
+        }
+
+        .animate-blob {
+            animation: blob 8s infinite alternate ease-in-out;
+        }
+
+        .animation-delay-2000 {
+            animation-delay: 2s;
+        }
+
+        .animation-delay-4000 {
+            animation-delay: 4s;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+
+        /* ===== Optimasi HP: lebih ringan & responsif ===== */
+        html, body { overscroll-behavior-y: none; -webkit-text-size-adjust: 100%; }
+        button, a, label, select, input, [onclick] { touch-action: manipulation; }
+        .app-shell { height: 100vh; height: 100dvh; }
+
+        /* iPhone otomatis zoom jika huruf input < 16px: samakan jadi 16px agar tidak zoom */
+        @supports (-webkit-touch-callout: none) {
+            input, select, textarea { font-size: 16px !important; }
+        }
+
+        /* Layar sentuh / HP: matikan efek yang berat bagi GPU */
+        @media (pointer: coarse), (max-width: 767px) {
+            /* Lingkaran cahaya: tanpa filter blur 100px+; tepi lembut memakai mask, diam tanpa animasi */
+            .animate-blob {
+                filter: none !important;
+                animation: none !important;
+                -webkit-mask-image: radial-gradient(circle closest-side, #000 20%, transparent 100%);
+                mask-image: radial-gradient(circle closest-side, #000 20%, transparent 100%);
+            }
+            /* Blur layar penuh dimatikan (hampir tidak terlihat bedanya, tapi sangat berat) */
+            .backdrop-blur-3xl, .backdrop-blur-md, .backdrop-blur-sm,
+            .app-shell, .glass-modal {
+                -webkit-backdrop-filter: none !important;
+                backdrop-filter: none !important;
+            }
+            .login-card, .login-btn-glass {
+                -webkit-backdrop-filter: blur(10px) !important;
+                backdrop-filter: blur(10px) !important;
+            }
+        }
+
+        /* ===== Login Screen (iOS Glass) ===== */
+        .login-hidden { display: none !important; }
+
+        #login-screen {
+            background:
+                radial-gradient(120% 70% at 15% 0%, rgba(139, 92, 246, 0.35), transparent 60%),
+                radial-gradient(100% 60% at 100% 100%, rgba(59, 130, 246, 0.28), transparent 60%),
+                #0a0a17;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.09);
+            backdrop-filter: blur(28px) saturate(170%);
+            -webkit-backdrop-filter: blur(28px) saturate(170%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 24px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .login-sheet {
+            background: rgba(20, 20, 36, 0.82);
+            backdrop-filter: blur(32px) saturate(170%);
+            -webkit-backdrop-filter: blur(32px) saturate(170%);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 0.8rem 1rem 0.8rem 2.6rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #fff;
+            outline: none;
+            transition: border-color .2s, background .2s;
+        }
+        .login-input::placeholder { color: rgba(203, 213, 225, 0.5); font-weight: 500; }
+        .login-input:focus { border-color: rgba(192, 132, 252, 0.9); background: rgba(255, 255, 255, 0.14); }
+
+        .login-btn-primary {
+            background: linear-gradient(135deg, #8b5cf6, #d946ef 60%, #ec4899);
+            box-shadow: 0 10px 28px rgba(168, 85, 247, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+        }
+
+        .login-btn-glass {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        .login-btn-glass:hover { background: rgba(255, 255, 255, 0.2); }
+
+        .otp-box {
+            width: 100%;
+            aspect-ratio: 1 / 1.15;
+            max-width: 48px;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 14px;
+            outline: none;
+            transition: border-color .15s, background .15s, transform .15s;
+        }
+        .otp-box:focus { border-color: rgba(192, 132, 252, 0.95); background: rgba(255, 255, 255, 0.16); transform: translateY(-1px); }
+
+        @keyframes login-shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(7px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(3px); }
+        }
+        .login-shake { animation: login-shake .4s ease; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .animate-blob, .login-shake { animation: none !important; }
+        }
+
+        /* =====================================================================
+           LIQUID GLASS (gaya iOS 27)
+           Bahan kaca: isi tembus pandang + sorot cahaya di tepi (specular rim)
+           + cahaya dalam + bayangan lembut. Tingkat kejernihan diatur lewat
+           variabel --lg-* (slider di Profil, seperti pengaturan opasitas iOS 27).
+           ===================================================================== */
+        :root {
+            --lg-alpha: 0.133; --lg-alpha-hi: 0.239; --lg-alpha-lo: 0.080;
+            --lg-dark-alpha: 0.60; --lg-modal-alpha: 0.89;
+            --lg-blur: 20px; --lg-sat: 175%;
+            --lg-rim: 0.45; --lg-rim-lo: 0.16;
+        }
+
+        .glass-card, .glass-card-dark, .glass-pill, .glass-modal {
+            -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat));
+            backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat));
+        }
+
+        /* Kartu utama (kaca terang) */
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255,255,255,var(--lg-alpha-hi)) 0%, rgba(255,255,255,var(--lg-alpha)) 48%, rgba(255,255,255,var(--lg-alpha-lo)) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow:
+                inset 1.5px 1.5px 0 rgba(255,255,255,var(--lg-rim)),
+                inset -1px -1px 0 rgba(255,255,255,var(--lg-rim-lo)),
+                inset 0 0 26px rgba(255,255,255,0.06),
+                0 16px 40px rgba(0, 0, 0, 0.30);
+        }
+
+        /* Panel (kaca gelap) */
+        .glass-card-dark {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 42%),
+                rgba(20, 18, 34, var(--lg-dark-alpha));
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            box-shadow:
+                inset 1px 1px 0 rgba(255,255,255,calc(var(--lg-rim) * 0.7)),
+                inset -1px -1px 0 rgba(255,255,255,calc(var(--lg-rim-lo) * 0.7)),
+                0 12px 30px rgba(0, 0, 0, 0.28);
+        }
+
+        /* Pil / tombol kecil */
+        .glass-pill {
+            background: linear-gradient(135deg, rgba(255,255,255,var(--lg-alpha-hi)) 0%, rgba(255,255,255,var(--lg-alpha-lo)) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow:
+                inset 1px 1px 0 rgba(255,255,255,var(--lg-rim)),
+                inset -1px -1px 0 rgba(255,255,255,var(--lg-rim-lo)),
+                0 4px 12px rgba(0, 0, 0, 0.16);
+        }
+
+        /* Lembar (modal) */
+        .glass-modal {
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 28%, rgba(255,255,255,0) 100%),
+                rgba(16, 15, 30, var(--lg-modal-alpha));
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow:
+                inset 0 1.5px 0 rgba(255,255,255,var(--lg-rim)),
+                inset 0 0 30px rgba(255,255,255,0.04),
+                0 -10px 50px rgba(0, 0, 0, 0.45);
+            animation: lg-sheet-in 0.5s cubic-bezier(0.2, 0.9, 0.25, 1.12) both;
+        }
+        @keyframes lg-sheet-in {
+            from { opacity: 0; transform: translateY(28px) scale(0.97); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        /* Elemen yang punya kelas shadow Tailwind tetap mendapat sorot kaca */
+        nav.glass-card {
+            box-shadow:
+                inset 1.5px 1.5px 0 rgba(255,255,255,var(--lg-rim)),
+                inset -1px -1px 0 rgba(255,255,255,var(--lg-rim-lo)),
+                inset 0 0 26px rgba(255,255,255,0.06),
+                0 18px 44px rgba(0, 0, 0, 0.42);
+        }
+
+        /* Latar berwarna agar kaca punya sesuatu untuk "dibiaskan" */
+        .app-shell {
+            background-image:
+                radial-gradient(70% 45% at 10% 0%, rgba(139, 92, 246, 0.30), transparent 70%),
+                radial-gradient(55% 40% at 100% 55%, rgba(59, 130, 246, 0.22), transparent 70%),
+                radial-gradient(70% 45% at 25% 105%, rgba(236, 72, 153, 0.28), transparent 70%);
+        }
+
+        /* Tab aktif: kapsul kaca seperti tab bar iOS 26/27 */
+        .nav-btn {
+            padding: 8px 6px;
+            border-radius: 9999px;
+            transition: background-color 0.35s cubic-bezier(0.2, 0.9, 0.25, 1.1), color 0.2s, box-shadow 0.35s, transform 0.2s;
+        }
+        .nav-btn[class*="text-purple-400"] {
+            background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.07));
+            box-shadow:
+                inset 1px 1px 0 rgba(255,255,255,0.5),
+                inset -1px -1px 0 rgba(255,255,255,0.14),
+                0 4px 16px rgba(139, 92, 246, 0.30);
+        }
+
+        /* Tombol gradien: permukaan kaca berkilau */
+        button[class*="bg-gradient-to-"]:not(.lg-fab) {
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow:
+                inset 0 1.5px 0 rgba(255,255,255,0.55),
+                inset 0 -3px 8px rgba(0,0,0,0.14),
+                0 10px 24px -8px rgba(0, 0, 0, 0.55);
+        }
+        button.lg-fab {
+            box-shadow:
+                inset 0 2px 0 rgba(255,255,255,0.65),
+                inset 0 -4px 10px rgba(0,0,0,0.20),
+                0 0 0 1px rgba(255,255,255,0.35),
+                0 14px 30px rgba(236, 72, 153, 0.50);
+        }
+
+        /* Kartu login memakai bahan yang sama */
+        .login-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.17) 0%, rgba(255,255,255,0.06) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow:
+                inset 1.5px 1.5px 0 rgba(255,255,255,0.45),
+                inset -1px -1px 0 rgba(255,255,255,0.14),
+                inset 0 0 30px rgba(255,255,255,0.05),
+                0 24px 60px rgba(0, 0, 0, 0.45);
+        }
+        .login-btn-glass {
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.45), inset -1px -1px 0 rgba(255,255,255,0.12), 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .otp-box {
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.3), inset -1px -1px 0 rgba(255,255,255,0.08);
+        }
+
+        /* Slider transparansi: pegangan berbentuk kapsul kaca */
+        .lg-range { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; cursor: pointer; }
+        .lg-range:focus { outline: none; }
+        .lg-range::-webkit-slider-runnable-track {
+            height: 10px; border-radius: 999px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.30));
+            border: 1px solid rgba(255,255,255,0.20);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.40);
+        }
+        .lg-range::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 36px; height: 24px; margin-top: -8px; border-radius: 999px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(226,222,255,0.85));
+            border: 1px solid rgba(255,255,255,0.8);
+            box-shadow: inset 0 1px 0 #fff, 0 3px 10px rgba(0,0,0,0.45);
+        }
+        .lg-range::-moz-range-track {
+            height: 10px; border-radius: 999px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.30));
+            border: 1px solid rgba(255,255,255,0.20);
+        }
+        .lg-range::-moz-range-thumb {
+            width: 34px; height: 22px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.8);
+            background: linear-gradient(180deg, #fff, #e2deff); box-shadow: 0 3px 10px rgba(0,0,0,0.45);
+        }
+        .lg-range:focus-visible::-webkit-slider-thumb { outline: 2px solid rgba(192,132,252,0.9); outline-offset: 2px; }
+
+
+        /* ===== Login Google & status sinkronisasi ===== */
+        .google-btn {
+            width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center; gap: .75rem;
+            padding: .85rem 1rem; border-radius: 1rem; background: #fff; color: #1f1f1f;
+            font-weight: 700; font-size: .875rem; border: 1px solid rgba(255,255,255,.9);
+            box-shadow: 0 6px 18px rgba(0,0,0,.28); transition: transform .15s, box-shadow .15s, opacity .15s;
+        }
+        .google-btn:hover { box-shadow: 0 8px 22px rgba(0,0,0,.36); }
+        .google-btn:active { transform: scale(.98); }
+        .google-btn[disabled] { opacity: .65; cursor: progress; }
+        .login-checking { display: flex; flex-direction: column; align-items: center; gap: .75rem; padding: 1.25rem 0; font-size: .75rem; color: rgba(226,232,240,.85); }
+        .login-checking.hidden, .login-error.hidden, .login-config.hidden { display: none !important; }
+        .iw-spinner { width: 26px; height: 26px; border-radius: 50%; border: 3px solid rgba(255,255,255,.25); border-top-color: #c084fc; animation: iw-spin .8s linear infinite; }
+        @keyframes iw-spin { to { transform: rotate(360deg); } }
+        .login-error { font-size: 11px; line-height: 1.5; color: #fda4af; background: rgba(244,63,94,.12); border: 1px solid rgba(244,63,94,.3); border-radius: .75rem; padding: .6rem .75rem; }
+        .login-config { font-size: 11px; line-height: 1.55; color: #fde68a; background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.35); border-radius: .75rem; padding: .75rem; }
+        .login-config code { background: rgba(255,255,255,.12); padding: 1px 5px; border-radius: 6px; font-size: 10.5px; }
+        .login-trust { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; font-size: 11px; color: rgba(203,213,225,.85); }
+        .login-trust li { display: flex; gap: .5rem; align-items: flex-start; line-height: 1.45; }
+        .sync-dot { width: 10px; height: 10px; border-radius: 50%; background: #94a3b8; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(148,163,184,.2); }
+        .sync-dot.is-syncing { animation: iw-pulse 1.1s ease-in-out infinite; }
+        @keyframes iw-pulse { 50% { opacity: .35; } }
+
+        /* Fokus keyboard yang jelas (laptop) */
+        button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline: 2px solid rgba(192,132,252,.95); outline-offset: 2px;
+        }
+
+        /* =====================================================================
+           TAMPILAN RESPONSIF
+           HP (< 768px)  : satu kolom penuh layar, navigasi di bawah
+           Tablet (≥ 768): kartu aplikasi lebih lebar, tetap satu kolom
+           Laptop (≥1024): sidebar navigasi di kiri + konten dua kolom
+           ===================================================================== */
+        #app-shell > header { padding-top: calc(1.5rem + env(safe-area-inset-top, 0px)); }
+        #app-shell > nav { bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
+        #login-inner { width: 100%; }
+
+        @media (min-width: 768px) {
+            #app-shell {
+                max-width: 760px;
+                height: min(960px, calc(100dvh - 3rem));
+                border-radius: 40px;
+            }
+            #app-shell > header { padding: 2rem 2.5rem .5rem; }
+            #app-shell > main { padding-left: 2.5rem; padding-right: 2.5rem; padding-bottom: 8rem; }
+            #app-shell > nav { left: 2.5rem; right: 2.5rem; bottom: 1.5rem; }
+            #login-inner { max-width: 460px; margin-left: auto; margin-right: auto; }
+        }
+
+        @media (min-width: 1024px) {
+            #app-shell {
+                max-width: 1240px;
+                height: min(920px, calc(100dvh - 3rem));
+                display: grid;
+                grid-template-columns: 112px minmax(0, 1fr);
+                grid-template-rows: auto minmax(0, 1fr);
+                border-radius: 36px;
+            }
+            #app-shell > header { grid-column: 2; grid-row: 1; padding: 1.75rem 2.5rem .75rem; }
+            #app-shell > main { grid-column: 2; grid-row: 2; min-height: 0; padding: .5rem 2.5rem 2.5rem; }
+
+            /* Navigasi bawah → sidebar kiri */
+            #app-shell > nav {
+                grid-column: 1; grid-row: 1 / -1;
+                position: static; width: auto; height: auto; margin: 0;
+                border-radius: 0; border: 0; border-right: 1px solid rgba(255,255,255,.12);
+                box-shadow: none; background: rgba(255,255,255,.04);
+                flex-direction: column; justify-content: flex-start; align-items: stretch;
+                gap: .5rem; padding: 1.75rem .75rem;
+            }
+            #app-shell > nav .nav-btn { flex: 0 0 auto; padding: .8rem .25rem; border-radius: 18px; gap: .25rem; }
+            #app-shell > nav .nav-btn:hover { background: rgba(255,255,255,.08); }
+            #app-shell > nav .nav-btn span { font-size: 11px; }
+            #nav-fab-wrap { order: -1; margin: 0 0 1rem; padding: 0; justify-content: center; }
+
+            /* Konten dua kolom */
+            #view-home:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+            #view-home > * { margin: 0; }
+            #view-analytics:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+            #view-analytics > * { margin: 0; }
+            #view-analytics > :first-child { grid-column: 1 / -1; }
+            #view-budget:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem; align-items: start; }
+            #view-budget > * { margin: 0; }
+            #view-budget > hr { display: none; }
+
+            #toast-banner { bottom: 2rem; }
+        }
+
+        @media (min-width: 1024px) and (max-height: 700px) {
+            #app-shell { height: calc(100dvh - 1.5rem); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .glass-modal { animation: none; }
+            .nav-btn { transition: none; }
+        }
+    </style>
+
+
+    <script>
+        /* Pengaturan kejernihan Liquid Glass: 0 = jernih, 100 = berembun (disimpan di perangkat) */
+        (function () {
+            var KEY = 'iwallet_glass', DEFAULT = 55;
+            function label(v) {
+                return v <= 20 ? 'Sangat jernih' : v <= 45 ? 'Jernih' : v <= 70 ? 'Seimbang' : v <= 90 ? 'Berembun' : 'Sangat berembun';
+            }
+            window.applyGlass = function (val, persist) {
+                var v = parseInt(val, 10);
+                if (isNaN(v)) v = DEFAULT;
+                v = Math.max(0, Math.min(100, v));
+                var mq = function (q) { return !!(window.matchMedia && window.matchMedia(q).matches); };
+                var small = mq('(pointer: coarse), (max-width: 767px)');   // HP: blur lebih kecil agar ringan
+                var reduce = mq('(prefers-reduced-transparency: reduce)'); // hormati "Kurangi Transparansi"
+                var t = reduce ? 1 : v / 100;
+                var a = 0.05 + t * 0.15;
+                var rim = 0.30 + (1 - t) * 0.30;
+                var blur = reduce ? 0 : (small ? 4 + t * 10 : 8 + t * 22);
+                var r = document.documentElement.style;
+                r.setProperty('--lg-alpha', a.toFixed(3));
+                r.setProperty('--lg-alpha-hi', (a * 1.8).toFixed(3));
+                r.setProperty('--lg-alpha-lo', (a * 0.6).toFixed(3));
+                r.setProperty('--lg-dark-alpha', (0.30 + t * 0.55).toFixed(3));
+                r.setProperty('--lg-modal-alpha', (0.80 + t * 0.17).toFixed(3));
+                r.setProperty('--lg-blur', blur.toFixed(1) + 'px');
+                r.setProperty('--lg-rim', rim.toFixed(3));
+                r.setProperty('--lg-rim-lo', (rim * 0.35).toFixed(3));
+                window.__glassValue = v;
+                var lab = document.getElementById('glass-value');
+                if (lab) lab.textContent = label(v);
+                if (persist) { try { localStorage.setItem(KEY, String(v)); } catch (e) {} }
+            };
+            var saved = null;
+            try { saved = localStorage.getItem(KEY); } catch (e) {}
+            window.applyGlass(saved !== null ? saved : DEFAULT, false);
+        })();
+    </script>
+
+    <!-- Tailwind CSS hasil build (jalankan: npm run build) -->
+    <link rel="stylesheet" href="output.css">
+</head>
+<body class="bg-slate-950 text-white min-h-dvh flex justify-center items-center p-0 md:p-6 overflow-x-hidden selection:bg-purple-500 selection:text-white">
+
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div class="absolute top-10 left-1/4 w-72 h-72 bg-purple-600 rounded-full filter blur-[100px] opacity-50 animate-blob"></div>
+        <div class="absolute top-1/3 right-10 w-80 h-80 bg-blue-600 rounded-full filter blur-[120px] opacity-40 animate-blob animation-delay-2000"></div>
+        <div class="absolute bottom-10 left-1/3 w-96 h-96 bg-pink-600 rounded-full filter blur-[130px] opacity-45 animate-blob animation-delay-4000"></div>
+    </div>
+
+    <!-- Mobile App Container -->
+    <div id="app-shell" class="w-full max-w-md app-shell md:h-[880px] md:rounded-[48px] bg-slate-900/60 border border-white/10 shadow-2xl relative flex flex-col overflow-hidden z-10 backdrop-blur-3xl">
+        
+        <!-- Header Bar -->
+        <header class="p-6 pb-2 flex justify-between items-center z-20">
+            <div class="flex items-center gap-3">
+                <div class="relative cursor-pointer" onclick="openModal('profile-modal')">
+                    <img src="data:image/svg+xml;utf8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 1 1%27%3E%3Crect width=%271%27 height=%271%27 fill=%27%238B5CF6%27/%3E%3C/svg%3E" alt="Avatar" class="w-11 h-11 rounded-2xl object-cover border-2 border-purple-500/50 shadow-lg" id="user-avatar" />
+                    <span class="absolute -bottom-1 -right-1 bg-emerald-500 w-3.5 h-3.5 rounded-full border-2 border-slate-900" id="user-status-dot"></span>
+                </div>
+                <div>
+                    <span class="text-[10px] text-purple-400 font-bold tracking-widest uppercase flex items-center gap-1">
+                        <i data-lucide="wallet" class="w-3 h-3"></i> iWallet App
+                    </span>
+                    <h2 class="text-base font-extrabold text-white leading-tight" id="user-name-display">Halo, Alex! 👋</h2>
+                </div>
+            </div>
+            <button onclick="openModal('profile-modal')" class="glass-pill p-2.5 rounded-2xl hover:bg-white/20 transition active:scale-95 text-white/90" title="Pengaturan Profil">
+                <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+            </button>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto px-6 pt-2 pb-32 hide-scrollbar space-y-6">
+            
+            <section id="view-home" class="space-y-6 transition-all duration-300">
+                <div id="home-col-main" class="space-y-6">
+                <!-- Main Balance Card (Apple Wallet Style) -->
+                <div class="glass-card rounded-[32px] p-6 relative overflow-hidden group">
+                    <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-full blur-2xl"></div>
+                    
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs uppercase font-semibold text-purple-200/80 tracking-wider">Sisa Dana Utama</span>
+                        <span id="health-badge" class="px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wide uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Aman 👍</span>
+                    </div>
+
+                    <div class="flex items-baseline gap-1 mb-6">
+                        <span class="text-xl font-medium text-slate-300">Rp</span>
+                        <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight" id="main-balance">0</h1>
+                    </div>
+
+                    <!-- Income vs Expense Quick View -->
+                    <div class="grid grid-cols-2 gap-3 pt-4 border-t border-white/10">
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">
+                                <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-[11px] text-slate-400 font-medium">Uang Masuk</p>
+                                <p class="text-xs sm:text-sm font-bold text-emerald-300" id="total-income">Rp 0</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <div class="p-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/20">
+                                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <p class="text-[11px] text-slate-400 font-medium">Pengeluaran</p>
+                                <p class="text-xs sm:text-sm font-bold text-rose-300" id="total-expense">Rp 0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plotted vs Unplotted Summary Pill -->
+                <div id="plotting-summary-card" class="glass-card-dark rounded-2xl p-3.5 border border-purple-500/20 flex justify-between items-center text-xs">
+                    <div class="flex items-center gap-2">
+                        <div class="p-2 rounded-xl bg-purple-500/20 text-purple-300">
+                            <i data-lucide="layers" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-slate-400 font-medium">Total Dana Di-Plotting</p>
+                            <p class="font-bold text-purple-300" id="summary-plotted-amount">Rp 0</p>
+                        </div>
+                    </div>
+                    <button onclick="switchTab('budget')" class="text-[11px] font-bold text-purple-400 hover:underline flex items-center gap-1">
+                        Kelola Plotting <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <!-- Monthly Budget Progress Bar -->
+                <div class="glass-card-dark rounded-2xl p-4 border border-white/10">
+                    <div class="flex justify-between items-center text-xs mb-2">
+                        <span class="text-slate-400 font-medium flex items-center gap-1.5">
+                            <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-purple-400"></i> Indikator Anggaran Bulan Ini
+                        </span>
+                        <span class="font-bold text-purple-300" id="budget-percentage">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-800/80 rounded-full h-2.5 overflow-hidden p-0.5 border border-white/5">
+                        <div id="budget-bar" class="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <div class="flex justify-between text-[11px] text-slate-400 mt-2">
+                        <span>Terpakai: <strong class="text-slate-200" id="budget-used">Rp 0</strong></span>
+                        <span>Batas: <strong class="text-slate-200" id="budget-limit">Rp 0</strong></span>
+                    </div>
+                </div>
+
+                <!-- Quick Category Action Badges -->
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs font-bold text-slate-200 tracking-wide uppercase">Catat Cepat</h3>
+                        <button type="button" onclick="openCategories()" class="text-[11px] text-purple-400 font-semibold hover:text-purple-300 flex items-center gap-1 transition">Kelola Kategori <i data-lucide="chevron-right" class="w-3 h-3"></i></button>
+                    </div>
+                    <div class="flex gap-2.5 overflow-x-auto pb-2 hide-scrollbar" id="quick-categories-container">
+                        <!-- Dynamic Quick Badges -->
+                    </div>
+                </div>
+
+                </div>
+                <div id="home-col-side" class="space-y-6">
+                <!-- Recent Grouped Transactions Feed -->
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-200 tracking-wide uppercase">Transaksi Terakhir</h3>
+                            <p class="text-[10px] text-slate-400">Dikelompokkan per kategori (Klik untuk rincian)</p>
+                        </div>
+                        <button onclick="clearAllTransactions()" class="text-xs text-rose-400 hover:underline flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i> Hapus Semua
+                        </button>
+                    </div>
+                    <div id="transaction-list" class="space-y-3">
+                        <!-- Grouped Category Cards with Accordion List -->
+                    </div>
+                </div>
+                </div>
+            </section>
+
+            <section id="view-analytics" class="hidden space-y-6 transition-all duration-300">
+                <div class="space-y-3">
+                    <h2 class="text-lg font-bold text-white">Analisis Pengeluaran</h2>
+                    
+                    <!-- Interconnected Filters: Responsive 3-Column Grid for Week, Month, Year -->
+                    <div class="grid grid-cols-3 gap-1.5 w-full glass-pill p-1 rounded-2xl">
+                        <button onclick="openWeekSelectorModal()" id="btn-week-select" class="text-[11px] px-2 py-2 rounded-xl font-semibold transition bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1 truncate border border-white/5">
+                            <i data-lucide="calendar" class="w-3 h-3 flex-shrink-0 text-purple-400"></i>
+                            <span id="label-selected-week" class="truncate">Semua Mgg</span>
+                            <i data-lucide="chevron-down" class="w-3 h-3 flex-shrink-0 opacity-60"></i>
+                        </button>
+                        <button onclick="openMonthSelectorModal()" id="btn-month-select" class="text-[11px] px-2 py-2 rounded-xl font-semibold transition bg-purple-600 text-white flex items-center justify-center gap-1 truncate shadow-md">
+                            <i data-lucide="calendar-days" class="w-3 h-3 flex-shrink-0"></i>
+                            <span id="label-selected-month" class="truncate">Oktober</span>
+                            <i data-lucide="chevron-down" class="w-3 h-3 flex-shrink-0 opacity-60"></i>
+                        </button>
+                        <button onclick="openYearSelectorModal()" id="btn-year-select" class="text-[11px] px-2 py-2 rounded-xl font-semibold transition bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-1 truncate border border-white/5">
+                            <i data-lucide="calendar-range" class="w-3 h-3 flex-shrink-0 text-pink-400"></i>
+                            <span id="label-selected-year" class="truncate">2026</span>
+                            <i data-lucide="chevron-down" class="w-3 h-3 flex-shrink-0 opacity-60"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Chart Container Card -->
+                <div class="glass-card-dark p-5 rounded-3xl space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-semibold text-slate-400" id="chart-period-title">Statistik Pengeluaran</span>
+                        <span class="text-xs text-purple-400 font-bold" id="period-total">Rp 0</span>
+                    </div>
+                    <div class="relative h-56 w-full flex justify-center items-center">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Category Breakdown Cards (Interactive Accordion) -->
+                <div>
+                    <h3 class="text-xs font-bold text-slate-200 mb-1 tracking-wide uppercase">Rincian Per Kategori</h3>
+                    <p class="text-[10px] text-slate-400 mb-3">Klik kotak kategori untuk melihat rincian pengeluaran & tanggalnya</p>
+                    <div id="category-breakdown" class="space-y-3">
+                        <!-- Dynamic Category Expandable Accordion items -->
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-budget" class="hidden space-y-6 transition-all duration-300">
+                
+                <!-- SECTION A: PLOTTING DANA KATEGORI -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-white flex items-center gap-1.5">
+                                <i data-lucide="pie-chart" class="w-5 h-5 text-purple-400"></i> Plotting Dana Kategori
+                            </h2>
+                            <p class="text-xs text-slate-400">Pisahkan dana utama ke pos anggaran khusus</p>
+                        </div>
+                        <button onclick="openModal('plotting-modal')" class="glass-pill px-3 py-1.5 rounded-2xl text-xs font-bold text-purple-300 flex items-center gap-1 hover:bg-white/20 transition">
+                            <i data-lucide="plus" class="w-4 h-4"></i> Tambah Plotting
+                        </button>
+                    </div>
+
+                    <!-- Plotted Fund Cards -->
+                    <div id="plotted-category-list" class="space-y-3">
+                        <!-- Dynamic Plotting Cards -->
+                    </div>
+                </div>
+
+                <hr class="border-white/10 my-4">
+
+                <!-- SECTION B: TARGET IMPIAN / TABUNGAN -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-lg font-bold text-white flex items-center gap-1.5">
+                                <i data-lucide="target" class="w-5 h-5 text-pink-400"></i> Target Impian 🎯
+                            </h2>
+                            <p class="text-xs text-slate-400">Tabungan khusus barang yang ingin kamu beli</p>
+                        </div>
+                        <button onclick="openModal('savings-modal')" class="glass-pill px-3 py-1.5 rounded-2xl text-xs font-bold text-pink-300 flex items-center gap-1 hover:bg-white/20 transition">
+                            <i data-lucide="plus" class="w-4 h-4"></i> Target Baru
+                        </button>
+                    </div>
+
+                    <!-- Savings Goal List -->
+                    <div id="savings-list" class="space-y-4">
+                        <!-- Dynamic Savings items -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <nav class="absolute bottom-4 left-4 right-4 h-16 glass-card rounded-full flex justify-between items-center px-3 z-20 border border-white/20 shadow-2xl">
+            <button onclick="switchTab('home')" id="nav-home" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-purple-400 transition active:scale-90">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Utama</span>
+            </button>
+            <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-white transition active:scale-90">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Analisis</span>
+            </button>
+
+            <!-- Elevated Center Floating Action Button -->
+            <div id="nav-fab-wrap" class="relative flex justify-center items-center px-1 -mt-6">
+                <button onclick="quickAdd('🍔 Makanan & Jajan')" class="lg-fab w-13 h-13 p-3.5 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-rose-400 flex items-center justify-center text-white shadow-xl shadow-purple-500/50 hover:scale-105 active:scale-95 transition-all border-2 border-white/40">
+                    <i data-lucide="plus" class="w-6 h-6 stroke-[2.5]"></i>
+                </button>
+            </div>
+
+            <button onclick="switchTab('budget')" id="nav-budget" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-white transition active:scale-90">
+                <i data-lucide="target" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Plotting</span>
+            </button>
+            <button onclick="openModal('profile-modal')" class="nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-white transition active:scale-90">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                <span class="text-[10px] font-bold">Profil</span>
+            </button>
+        </nav>
+
+        <!-- MODAL 1: ADD / EDIT TRANSACTION -->
+        <div id="transaction-modal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-md transition-opacity">
+            <div class="w-full max-w-md glass-modal rounded-t-[32px] sm:rounded-[32px] p-6 space-y-4 animate-in slide-in-from-bottom duration-300 border border-white/20 max-h-[90dvh] overflow-y-auto">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2" id="modal-tx-title">
+                        <i data-lucide="receipt" class="w-5 h-5 text-purple-400"></i> Catat Transaksi Baru
+                    </h3>
+                    <button onclick="closeModal('transaction-modal')" class="p-1.5 rounded-full glass-pill hover:bg-white/20">
+                        <i data-lucide="x" class="w-5 h-5 text-slate-400"></i>
+                    </button>
+                </div>
+
+                <!-- Type Selector (Pengeluaran / Pemasukan) -->
+                <div class="grid grid-cols-2 gap-2 glass-pill p-1 rounded-2xl">
+                    <button type="button" onclick="setTransactionType('expense')" id="type-expense" class="py-2 rounded-xl text-xs font-bold bg-rose-500/80 text-white transition shadow-md">Pengeluaran 💸</button>
+                    <button type="button" onclick="setTransactionType('income')" id="type-income" class="py-2 rounded-xl text-xs font-bold text-slate-400 transition">Pemasukan 💰</button>
+                </div>
+
+                <form id="transaction-form" onsubmit="handleSaveTransaction(event)" class="space-y-4">
+                    <input type="hidden" id="tx-edit-id" value="">
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Nominal (Rp)</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-3 text-sm font-bold text-slate-400">Rp</span>
+                            <input type="text" id="tx-amount" inputmode="numeric" pattern="[0-9.]*" autocomplete="off" enterkeyhint="done" oninput="formatNumberInput(this)" placeholder="10.000" required class="w-full pl-11 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-2xl text-sm font-bold text-white outline-none focus:border-purple-400 transition">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Kategori</label>
+                        <select id="tx-category" onchange="toggleCustomCategoryField(this.value)" required class="w-full px-4 py-2.5 bg-slate-800 border border-white/20 rounded-2xl text-xs font-semibold text-white outline-none focus:border-purple-400 transition">
+                            <option value="🍔 Makanan & Jajan">🍔 Makanan & Jajan</option>
+                            <option value="🛵 Transportasi">🛵 Transportasi</option>
+                            <option value="🎮 Hiburan & Game">🎮 Hiburan & Game</option>
+                            <option value="🛍️ Belanja & Kebutuhan">🛍️ Belanja & Kebutuhan</option>
+                            <option value="📚 Sekolah & Edukasi">📚 Sekolah & Edukasi</option>
+                            <option value="💰 Uang Saku Utama">💰 Uang Saku Utama / Gaji</option>
+                            <option value="🎁 Bonus & Lainnya">🎁 Bonus & Lainnya</option>
+                            <option value="__CUSTOM__">➕ Kategori Bebas / Tambah Baru...</option>
+                        </select>
+                    </div>
+
+                    <!-- Custom Category Fields (hidden by default) -->
+                    <div id="custom-category-group" class="hidden space-y-2 bg-slate-800/60 p-3 rounded-2xl border border-purple-500/30">
+                        <label class="block text-[11px] font-semibold text-purple-300">Nama & Ikon Kategori Bebas</label>
+                        <div id="tx-emoji-picker" class="grid grid-cols-8 gap-1.5 max-h-40 overflow-y-auto hide-scrollbar" role="group" aria-label="Pilih ikon kategori"></div>
+                        <p class="text-[10px] text-slate-400">Ketuk emoji di atas, atau ketik emoji pilihanmu sendiri di kotak kiri.</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="custom-cat-emoji" placeholder="🏷️" aria-label="Ikon kategori" autocomplete="off" class="w-12 text-center py-2 bg-white/10 border border-white/20 rounded-xl text-base outline-none">
+                            <input type="text" id="custom-cat-name" autocapitalize="words" enterkeyhint="done" placeholder="Misal: Skincare, Tagihan" class="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-xs text-white outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Catatan / Keterangan</label>
+                        <input type="text" id="tx-note" autocapitalize="sentences" enterkeyhint="done" placeholder="Contoh: Es Kopi Susu, Bensin V-Power" required class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-2xl text-xs text-white outline-none focus:border-purple-400 transition">
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="block text-xs font-semibold text-slate-300">Tanggal Transaksi</label>
+                            <button type="button" onclick="setTxDateToToday()" class="text-[11px] font-bold text-blue-400 hover:text-blue-300 hover:underline">
+                                Hari Ini
+                            </button>
+                        </div>
+                        <input type="date" id="tx-date" required class="w-full px-4 py-2.5 bg-slate-800 border border-white/20 rounded-2xl text-xs text-white outline-none focus:border-purple-400 transition">
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white font-bold text-xs rounded-2xl shadow-lg shadow-purple-500/30 transition active:scale-98">
+                        Simpan Transaksi ✍️
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: DAFTAR KATEGORI -->
+        <div id="categories-modal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-md">
+            <div class="w-full max-w-md glass-modal rounded-t-[32px] sm:rounded-[32px] p-6 space-y-4 border border-white/20 max-h-[90dvh] overflow-y-auto">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i data-lucide="layers" class="w-5 h-5 text-purple-400"></i> Daftar Kategori
+                    </h3>
+                    <button type="button" onclick="closeModal('categories-modal')" class="p-1.5 rounded-full glass-pill hover:bg-white/20" aria-label="Tutup">
+                        <i data-lucide="x" class="w-5 h-5 text-slate-400"></i>
+                    </button>
+                </div>
+
+                <div id="category-list" class="space-y-2"></div>
+
+                <form onsubmit="addCustomCategory(event)" class="space-y-2 bg-slate-800/60 p-3 rounded-2xl border border-purple-500/30" novalidate>
+                    <label class="block text-[11px] font-semibold text-purple-300">Tambah Kategori Baru</label>
+                    <div id="cat-emoji-picker" class="grid grid-cols-8 gap-1.5 max-h-40 overflow-y-auto hide-scrollbar" role="group" aria-label="Pilih ikon kategori"></div>
+                    <p class="text-[10px] text-slate-400">Ketuk emoji di atas, atau ketik emoji pilihanmu sendiri di kotak kiri.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="cat-new-emoji" placeholder="🏷️" aria-label="Ikon kategori" autocomplete="off" class="w-12 text-center py-2 bg-white/10 border border-white/20 rounded-xl text-base outline-none">
+                        <input type="text" id="cat-new-name" autocapitalize="words" enterkeyhint="done" maxlength="24" placeholder="Misal: Skincare, Tagihan" aria-label="Nama kategori" class="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-xl text-xs text-white outline-none focus:border-purple-400">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-xs rounded-2xl shadow-lg shadow-purple-500/30 transition active:scale-98">Simpan Kategori ✨</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL 2: PLOTTING DANA KATEGORI -->
+        <div id="plotting-modal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-md">
+            <div class="w-full max-w-md glass-modal rounded-t-[32px] sm:rounded-[32px] p-6 space-y-4 border border-white/20">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i data-lucide="layers" class="w-5 h-5 text-purple-400"></i> Buat Plotting Dana Kategori
+                    </h3>
+                    <button onclick="closeModal('plotting-modal')" class="p-1.5 rounded-full glass-pill hover:bg-white/20">
+                        <i data-lucide="x" class="w-5 h-5 text-slate-400"></i>
+                    </button>
+                </div>
+
+                <form onsubmit="handleSavePlotting(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Pilih Kategori Pos Dana</label>
+                        <select id="plotting-category-select" required class="w-full px-4 py-2.5 bg-slate-800 border border-white/20 rounded-2xl text-xs font-semibold text-white outline-none focus:border-purple-400">
+                            <option value="🍔 Makanan & Jajan">🍔 Makanan & Jajan</option>
+                            <option value="🛵 Transportasi">🛵 Transportasi</option>
+                            <option value="🎮 Hiburan & Game">🎮 Hiburan & Game</option>
+                            <option value="🛍️ Belanja & Kebutuhan">🛍️ Belanja & Kebutuhan</option>
+                            <option value="📚 Sekolah & Edukasi">📚 Sekolah & Edukasi</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Alokasi Dana Plotting (Rp)</label>
+                        <input type="text" id="plotting-amount" inputmode="numeric" pattern="[0-9.]*" autocomplete="off" enterkeyhint="done" oninput="formatNumberInput(this)" placeholder="500.000" required class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-400">
+                        <p class="text-[10px] text-slate-400 mt-1">Dana ini akan dipisahkan dari Dana Utama.</p>
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white font-bold text-xs rounded-2xl shadow-lg transition">
+                        Simpan Plotting 🎯
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL 3: MONTH POPUP SELECTOR -->
+        <div id="month-selector-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+            <div class="w-full max-w-xs glass-modal rounded-[28px] p-5 space-y-4 border border-white/20">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Pilih Bulan</h3>
+                    <button onclick="closeModal('month-selector-modal')" class="p-1 rounded-full glass-pill hover:bg-white/20">
+                        <i data-lucide="x" class="w-4 h-4 text-slate-400"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-3 gap-2" id="months-grid-container">
+                    <!-- 12 Months Buttons -->
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 4: YEAR POPUP SELECTOR -->
+        <div id="year-selector-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+            <div class="w-full max-w-xs glass-modal rounded-[28px] p-5 space-y-4 border border-white/20">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Pilih Tahun</h3>
+                    <button onclick="closeModal('year-selector-modal')" class="p-1 rounded-full glass-pill hover:bg-white/20">
+                        <i data-lucide="x" class="w-4 h-4 text-slate-400"></i>
+                    </button>
+                </div>
+                <div class="grid grid-cols-3 gap-2" id="years-grid-container">
+                    <!-- Years Buttons -->
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 5: WEEK POPUP SELECTOR -->
+        <div id="week-selector-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+            <div class="w-full max-w-xs glass-modal rounded-[28px] p-5 space-y-4 border border-white/20">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Pilih Minggu</h3>
+                    <button onclick="closeModal('week-selector-modal')" class="p-1 rounded-full glass-pill hover:bg-white/20">
+                        <i data-lucide="x" class="w-4 h-4 text-slate-400"></i>
+                    </button>
+                </div>
+                <div class="space-y-2" id="weeks-list-container">
+                    <!-- Weeks Buttons -->
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 6: ADD SAVINGS GOAL -->
+        <div id="savings-modal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-md">
+            <div class="w-full max-w-md glass-modal rounded-t-[32px] sm:rounded-[32px] p-6 space-y-4 border border-white/20">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i data-lucide="target" class="w-5 h-5 text-pink-400"></i> Buat Target Impian Baru
+                    </h3>
+                    <button onclick="closeModal('savings-modal')" class="p-1.5 rounded-full glass-pill hover:bg-white/20">
+                        <i data-lucide="x" class="w-5 h-5 text-slate-400"></i>
+                    </button>
+                </div>
+
+                <form onsubmit="handleSaveSavingsGoal(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Nama Barang / Impian</label>
+                        <input type="text" id="goal-title" autocapitalize="words" enterkeyhint="done" placeholder="Contoh: Tiket Konser, Sepatu Baru" required class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-2xl text-xs text-white outline-none focus:border-purple-400">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Harga Target (Rp)</label>
+                        <input type="text" id="goal-target" inputmode="numeric" pattern="[0-9.]*" autocomplete="off" enterkeyhint="done" oninput="formatNumberInput(this)" placeholder="600.000" required class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-400">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Tabungan Awal (Opsional)</label>
+                        <input type="text" id="goal-initial" inputmode="numeric" pattern="[0-9.]*" autocomplete="off" enterkeyhint="done" oninput="formatNumberInput(this)" placeholder="100.000" class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-2xl text-xs text-white outline-none focus:border-purple-400">
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold text-xs rounded-2xl shadow-lg transition">
+                        Simpan Target 🚀
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL 7: ADD MONEY TO SAVINGS -->
+        <div id="deposit-modal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-md">
+            <div class="w-full max-w-md glass-modal rounded-t-[32px] sm:rounded-[32px] p-6 space-y-4 border border-white/20">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i data-lucide="piggy-bank" class="w-5 h-5 text-emerald-400"></i> Tambah Tabungan
+                    </h3>
+                    <button onclick="closeModal('deposit-modal')" class="p-1.5 rounded-full glass-pill hover:bg-white/20">
+                        <i data-lucide="x" class="w-5 h-5 text-slate-400"></i>
+                    </button>
+                </div>
+
+                <p class="text-xs text-slate-300" id="deposit-goal-name">Target: -</p>
+
+                <form onsubmit="handleSaveDeposit(event)" class="space-y-4">
+                    <input type="hidden" id="deposit-goal-id">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Nominal Tambahan (Rp)</label>
+                        <input type="text" id="deposit-amount" inputmode="numeric" pattern="[0-9.]*" autocomplete="off" enterkeyhint="done" oninput="formatNumberInput(this)" placeholder="50.000" required class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-2xl text-sm font-bold text-white outline-none focus:border-emerald-400">
+                    </div>
+
+                    <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold text-xs rounded-2xl shadow-lg transition">
+                        Tabung Sekarang 💰
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL 8: PROFILE & SETTINGS -->
+        <div id="profile-modal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-md">
+            <div class="w-full max-w-md glass-modal rounded-t-[32px] sm:rounded-[32px] p-6 space-y-5 border border-white/20 max-h-[85vh] overflow-y-auto">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i data-lucide="user" class="w-5 h-5 text-purple-400"></i> Pengaturan Profil & iWallet
+                    </h3>
+                    <button onclick="closeModal('profile-modal')" class="p-1.5 rounded-full glass-pill hover:bg-white/20">
+                        <i data-lucide="x" class="w-5 h-5 text-slate-400"></i>
+                    </button>
+                </div>
+
+                <div class="glass-pill rounded-2xl p-3 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="shield-check" class="w-4 h-4 text-purple-300"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p id="profile-account-email" class="text-xs font-bold text-white truncate"></p>
+                        <p id="profile-account-provider" class="text-[10px] text-slate-400"></p>
+                    </div>
+                    <button type="button" onclick="logoutUser()" class="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 text-[11px] font-bold text-slate-200 hover:bg-white/20 flex items-center gap-1 transition active:scale-95">
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Keluar
+                    </button>
+                </div>
+
+                <div class="glass-pill rounded-2xl p-3 flex items-center gap-3">
+                    <span id="sync-dot" class="sync-dot" aria-hidden="true"></span>
+                    <div class="min-w-0 flex-1" role="status" aria-live="polite">
+                        <p id="sync-title" class="text-xs font-bold text-white">Sinkronisasi</p>
+                        <p id="sync-detail" class="text-[10px] text-slate-400 leading-snug"></p>
+                    </div>
+                    <button type="button" id="sync-btn" onclick="syncNow()" class="px-3 py-1.5 rounded-xl bg-white/10 border border-white/20 text-[11px] font-bold text-slate-200 hover:bg-white/20 flex items-center gap-1">Sinkronkan</button>
+                </div>
+
+                <div id="install-card" class="glass-pill rounded-2xl p-3" style="display:none;">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center flex-shrink-0 text-base">📲</div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-bold text-white">Pasang di HP</p>
+                            <p id="install-hint" class="text-[10px] text-slate-400 leading-snug"></p>
+                        </div>
+                        <button type="button" id="install-btn" onclick="installApp()" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-[11px] font-bold text-white transition active:scale-95" style="display:none;">Pasang</button>
+                    </div>
+                </div>
+
+                <div class="glass-pill rounded-2xl p-3 space-y-1">
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs font-bold text-white flex items-center gap-2"><span>🫧</span> Tampilan Liquid Glass</p>
+                        <span id="glass-value" class="text-[10px] font-semibold text-purple-300">Seimbang</span>
+                    </div>
+                    <input type="range" id="glass-range" class="lg-range" min="0" max="100" step="1" value="55" aria-label="Kejernihan kaca" oninput="applyGlass(this.value, true)">
+                    <div class="flex justify-between text-[10px] text-slate-400"><span>Jernih</span><span>Berembun</span></div>
+                </div>
+
+                <form onsubmit="handleSaveProfile(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Nama Kamu</label>
+                        <input type="text" id="profile-name-input" autocapitalize="words" autocomplete="name" enterkeyhint="done" required class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-400">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Foto Profil / Avatar</label>
+                        <div class="flex gap-2 mb-2">
+                            <input type="text" id="profile-avatar-input" class="flex-1 px-4 py-2.5 bg-white/10 border border-white/20 rounded-2xl text-xs text-white outline-none focus:border-purple-400" placeholder="URL foto (kosongkan untuk tetap memakai yang sekarang)">
+                        </div>
+                        <div id="preset-avatars" class="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Avatar bawaan"></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Batas Anggaran Bulanan (Rp)</label>
+                        <input type="text" id="profile-budget-input" inputmode="numeric" pattern="[0-9.]*" autocomplete="off" enterkeyhint="done" oninput="formatNumberInput(this)" required class="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-400">
+                    </div>
+
+                    <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-2xl transition">
+                        Simpan Profil ✨
+                    </button>
+                </form>
+
+                <hr class="border-white/10 my-2">
+
+                <div class="space-y-2">
+                    <h4 class="text-xs font-bold text-slate-300">Ekspor & Data Spreadsheet</h4>
+                    <button onclick="exportToExcel()" class="w-full py-2.5 glass-pill hover:bg-white/20 text-emerald-300 font-bold text-xs rounded-2xl flex items-center justify-center gap-2 border border-emerald-500/30">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Unduh Laporan Excel (.xlsx)
+                    </button>
+                    <button onclick="exportToSpreadsheetCSV()" class="w-full py-2 text-slate-400 hover:text-slate-200 font-semibold text-[11px] rounded-2xl transition">
+                        Atau unduh sebagai CSV (alternatif)
+                    </button>
+                    <p class="text-[10px] text-slate-500 leading-snug px-1">Disarankan memakai Excel (.xlsx): huruf dan emoji selalu tampil benar di Excel, Google Sheets, maupun WPS.</p>
+                    <button onclick="resetAllAppData()" class="w-full py-2.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold text-xs rounded-2xl border border-rose-500/30">
+                        🔥 Reset Seluruh Data Aplikasi
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL 9: CUSTOM GLASS CONFIRMATION MODAL (Replaces alert/confirm) -->
+        <div id="confirm-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+            <div class="w-full max-w-xs glass-modal rounded-[28px] p-5 space-y-4 border border-white/20 text-center">
+                <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 mx-auto flex items-center justify-center text-xl">
+                    ⚠️
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-white" id="confirm-modal-title">Konfirmasi Action</h3>
+                    <p class="text-xs text-slate-300 mt-1 leading-relaxed" id="confirm-modal-msg">Apakah kamu yakin ingin melanjutkan?</p>
+                </div>
+                <div class="grid grid-cols-2 gap-2 pt-2">
+                    <button type="button" onclick="closeModal('confirm-modal')" class="py-2.5 rounded-xl glass-pill text-xs font-semibold text-slate-300 hover:bg-white/20">Batal</button>
+                    <button type="button" id="confirm-modal-action-btn" class="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white shadow-lg">Ya, Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ LOGIN SCREEN ============ -->
+        <div id="login-screen" class="absolute inset-0 z-40 overflow-y-auto hide-scrollbar">
+            <div class="absolute inset-0 overflow-hidden pointer-events-none">
+                <div class="absolute -top-16 -left-10 w-64 h-64 bg-purple-600 rounded-full filter blur-[90px] opacity-50 animate-blob"></div>
+                <div class="absolute top-1/2 -right-16 w-64 h-64 bg-blue-600 rounded-full filter blur-[100px] opacity-35 animate-blob animation-delay-2000"></div>
+                <div class="absolute -bottom-20 left-1/4 w-72 h-72 bg-pink-600 rounded-full filter blur-[110px] opacity-40 animate-blob animation-delay-4000"></div>
+            </div>
+
+            <div class="relative z-10 min-h-full flex flex-col justify-center px-6 py-10 gap-7"><div id="login-inner" class="flex flex-col gap-7">
+
+                <!-- Logo + Judul -->
+                <div class="text-center">
+                    <div class="mx-auto w-[104px] h-[104px]" style="filter: drop-shadow(0 18px 30px rgba(168, 85, 247, 0.5));">
+                        <svg id="login-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="104" height="104" role="img" aria-label="Logo iWallet">
+                            <defs>
+                                <linearGradient id="lg-bg" gradientUnits="userSpaceOnUse" x1="8" y1="0" x2="112" y2="120">
+                                    <stop offset="0" stop-color="#8B5CF6"/>
+                                    <stop offset="0.55" stop-color="#D946EF"/>
+                                    <stop offset="1" stop-color="#3B82F6"/>
+                                </linearGradient>
+                                <linearGradient id="lg-gloss" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0" stop-color="#fff" stop-opacity="0.55"/>
+                                    <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+                                </linearGradient>
+                                <linearGradient id="lg-glass" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0" stop-color="#fff" stop-opacity="0.7"/>
+                                    <stop offset="1" stop-color="#fff" stop-opacity="0.22"/>
+                                </linearGradient>
+                                <linearGradient id="lg-coin" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0" stop-color="#FEF3C7"/>
+                                    <stop offset="0.5" stop-color="#FCD34D"/>
+                                    <stop offset="1" stop-color="#F59E0B"/>
+                                </linearGradient>
+                                <clipPath id="lg-clip"><rect width="120" height="120" rx="28"/></clipPath>
+                            </defs>
+                            <!-- Squircle ikon iOS -->
+                            <rect width="120" height="120" rx="28" fill="url(#lg-bg)"/>
+                            <g clip-path="url(#lg-clip)">
+                                <circle cx="28" cy="18" r="38" fill="#fff" opacity="0.16"/>
+                                <rect width="120" height="62" fill="url(#lg-gloss)" opacity="0.45"/>
+                            </g>
+                            <rect x="0.75" y="0.75" width="118.5" height="118.5" rx="27.25" fill="none" stroke="#fff" stroke-opacity="0.45" stroke-width="1.5"/>
+                            <!-- Bayangan dompet -->
+                            <ellipse cx="60" cy="101" rx="29" ry="4" fill="#1E1B4B" opacity="0.28"/>
+                            <!-- Tutup dompet (belakang) -->
+                            <path d="M26 54 Q26 43 37 41 L81 34 Q93 32 93 43 V56 H26 Z" fill="#fff" fill-opacity="0.34" stroke="#fff" stroke-opacity="0.5" stroke-width="1.2"/>
+                            <!-- Koin jatuh ke dompet -->
+                            <circle cx="58" cy="40" r="12.5" fill="url(#lg-coin)"/>
+                            <circle cx="58" cy="40" r="8.2" fill="none" stroke="#B45309" stroke-opacity="0.4" stroke-width="1.6"/>
+                            <path d="M51.5 36.5 A8 8 0 0 1 58 32.6" fill="none" stroke="#fff" stroke-opacity="0.85" stroke-width="1.8" stroke-linecap="round"/>
+                            <!-- Badan dompet kaca -->
+                            <rect x="24" y="49" width="72" height="46" rx="14" fill="url(#lg-glass)" stroke="#fff" stroke-opacity="0.75" stroke-width="1.5"/>
+                            <path d="M35 56 H79" stroke="#fff" stroke-opacity="0.55" stroke-width="1.6" stroke-linecap="round"/>
+                            <!-- Kancing dompet -->
+                            <rect x="71" y="62" width="30" height="20" rx="10" fill="#fff" fill-opacity="0.4" stroke="#fff" stroke-opacity="0.8" stroke-width="1.3"/>
+                            <circle cx="82" cy="72" r="3.4" fill="#fff"/>
+                            <!-- Kilau -->
+                            <path d="M95 14 l2.3 6.2 L103.5 22.5 l-6.2 2.3 L95 31 l-2.3-6.2 L86.5 22.5 l6.2-2.3 z" fill="#fff" fill-opacity="0.92"/>
+                        </svg>
+                    </div>
+                    <h1 class="mt-5 text-[2rem] leading-none font-extrabold tracking-tight text-white">iWallet</h1>
+                    <p class="mt-2 text-[13px] text-slate-300/85 leading-relaxed max-w-[250px] mx-auto">Catat jajan, atur uang saku, dan capai target tabunganmu.</p>
+                </div>
+
+                <!-- Kartu Login (Google) -->
+                <div class="login-card rounded-[32px] p-5">
+                    <div id="login-checking" class="login-checking" role="status" aria-live="polite">
+                        <span class="iw-spinner" aria-hidden="true"></span>
+                        <p>Memeriksa akun...</p>
+                    </div>
+
+                    <div id="login-config" class="login-config hidden" role="alert">
+                        <p class="font-bold mb-1">Login Google belum disiapkan</p>
+                        <p>Isi data proyek Firebase di file <code>firebase-config.js</code>, aktifkan Google di Firebase Authentication, lalu muat ulang halaman ini. Langkah lengkapnya ada di <code>PANDUAN-SETUP.md</code>.</p>
+                    </div>
+
+                    <div id="login-main" class="hidden space-y-4">
+                        <div>
+                            <h3 class="text-base font-bold text-white">Masuk dengan aman</h3>
+                            <p class="text-xs text-slate-300/85 mt-1 leading-relaxed">Pakai akun Google-mu. Tanpa kata sandi baru, dan datamu sama di HP, tablet, maupun laptop.</p>
+                        </div>
+                        <button type="button" id="btn-google" onclick="signInWithGoogle()" class="google-btn">
+                            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                                <path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.58-5.17 3.58-8.81z"/>
+                                <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.88-3c-1.07.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.94H1.28v3.1A12 12 0 0 0 12 24z"/>
+                                <path fill="#FBBC05" d="M5.29 14.3A7.2 7.2 0 0 1 4.91 12c0-.8.14-1.57.38-2.3v-3.1H1.28A12 12 0 0 0 0 12c0 1.94.46 3.77 1.28 5.4l4.01-3.1z"/>
+                                <path fill="#EA4335" d="M12 4.75c1.76 0 3.34.61 4.58 1.8l3.43-3.43C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.28 6.6l4.01 3.1C6.23 6.86 8.88 4.75 12 4.75z"/>
+                            </svg>
+                            <span id="btn-google-label">Lanjutkan dengan Google</span>
+                        </button>
+                        <p id="login-error" class="login-error hidden" role="alert"></p>
+                        <ul class="login-trust">
+                            <li><span aria-hidden="true">🔒</span><span>Kami tidak pernah melihat kata sandi Google-mu. Proses masuk ditangani langsung oleh Google.</span></li>
+                            <li><span aria-hidden="true">☁️</span><span>Masuk dengan email Google yang sama di perangkat lain, dan semua catatanmu langsung muncul.</span></li>
+                            <li><span aria-hidden="true">📴</span><span>Tetap bisa mencatat saat offline. Datanya tersinkron otomatis begitu online lagi.</span></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p class="text-center text-[11px] text-slate-400 leading-relaxed px-4">Datamu hanya bisa dibuka dengan login Google-mu sendiri.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <script>
+            /* Pengguna yang pernah masuk: sembunyikan layar login lebih awal agar tidak berkedip */
+            try { if (localStorage.getItem('iwallet_last_user')) document.getElementById('login-screen').classList.add('login-hidden'); } catch (e) {}
+        </script>
+
+        <!-- Toast Banner -->
+        <div id="toast-banner" class="fixed bottom-20 left-1/2 -translate-x-1/2 bg-slate-800/90 text-white border border-white/20 px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2 z-50 transform translate-y-10 opacity-0 transition-all pointer-events-none text-xs max-w-xs text-center">
+            <span id="toast-icon">✨</span>
+            <span id="toast-msg">Notifikasi</span>
+        </div>
+
+    </div>
+
+    <script>
+        /* Ikon: SVG inline bergaya Lucide (24x24, stroke 2). Tidak butuh library atau internet. */
+        const ICONS = {
+        "x": "<path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/>",
+        "trash-2": "<path d=\"M3 6h18\"/><path d=\"M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6\"/><path d=\"M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2\"/><line x1=\"10\" x2=\"10\" y1=\"11\" y2=\"17\"/><line x1=\"14\" x2=\"14\" y1=\"11\" y2=\"17\"/>",
+        "target": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><circle cx=\"12\" cy=\"12\" r=\"6\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/>",
+        "plus": "<path d=\"M5 12h14\"/><path d=\"M12 5v14\"/>",
+        "plus-circle": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M8 12h8\"/><path d=\"M12 8v8\"/>",
+        "chevron-down": "<path d=\"m6 9 6 6 6-6\"/>",
+        "chevron-up": "<path d=\"m18 15-6-6-6 6\"/>",
+        "chevron-right": "<path d=\"m9 18 6-6-6-6\"/>",
+        "chevron-left": "<path d=\"m15 18-6-6 6-6\"/>",
+        "wallet": "<path d=\"M21 12V7H5a2 2 0 0 1 0-4h14v4\"/><path d=\"M3 5v14a2 2 0 0 0 2 2h16v-5\"/><path d=\"M18 12a2 2 0 0 0 0 4h4v-4Z\"/>",
+        "user": "<path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/>",
+        "pie-chart": "<path d=\"M21.21 15.89A10 10 0 1 1 8 2.83\"/><path d=\"M22 12A10 10 0 0 0 12 2v10z\"/>",
+        "layers": "<path d=\"m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z\"/><path d=\"m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65\"/><path d=\"m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65\"/>",
+        "sliders-horizontal": "<line x1=\"21\" x2=\"14\" y1=\"4\" y2=\"4\"/><line x1=\"10\" x2=\"3\" y1=\"4\" y2=\"4\"/><line x1=\"21\" x2=\"12\" y1=\"12\" y2=\"12\"/><line x1=\"8\" x2=\"3\" y1=\"12\" y2=\"12\"/><line x1=\"21\" x2=\"16\" y1=\"20\" y2=\"20\"/><line x1=\"12\" x2=\"3\" y1=\"20\" y2=\"20\"/><line x1=\"14\" x2=\"14\" y1=\"2\" y2=\"6\"/><line x1=\"8\" x2=\"8\" y1=\"10\" y2=\"14\"/><line x1=\"16\" x2=\"16\" y1=\"18\" y2=\"22\"/>",
+        "shield-check": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"/><path d=\"m9 12 2 2 4-4\"/>",
+        "receipt": "<path d=\"M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z\"/><path d=\"M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8\"/><path d=\"M12 17.5v-11\"/>",
+        "piggy-bank": "<path d=\"M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z\"/><path d=\"M2 9v1c0 1.1.9 2 2 2h1\"/><path d=\"M16 11h.01\"/>",
+        "mail": "<rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\"/><path d=\"m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7\"/>",
+        "log-out": "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/><polyline points=\"16 17 21 12 16 7\"/><line x1=\"21\" x2=\"9\" y1=\"12\" y2=\"12\"/>",
+        "home": "<path d=\"m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/><polyline points=\"9 22 9 12 15 12 15 22\"/>",
+        "file-spreadsheet": "<path d=\"M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z\"/><path d=\"M14 2v4a2 2 0 0 0 2 2h4\"/><path d=\"M8 13h2\"/><path d=\"M14 13h2\"/><path d=\"M8 17h2\"/><path d=\"M14 17h2\"/>",
+        "edit-3": "<path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z\"/>",
+        "calendar": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M16 2v4\"/><path d=\"M8 2v4\"/><path d=\"M3 10h18\"/>",
+        "calendar-days": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M16 2v4\"/><path d=\"M8 2v4\"/><path d=\"M3 10h18\"/><path d=\"M8 14h.01\"/><path d=\"M12 14h.01\"/><path d=\"M16 14h.01\"/><path d=\"M8 18h.01\"/><path d=\"M12 18h.01\"/><path d=\"M16 18h.01\"/>",
+        "calendar-range": "<rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M16 2v4\"/><path d=\"M3 10h18\"/><path d=\"M8 2v4\"/><path d=\"M17 14h-6\"/><path d=\"M13 18H7\"/><path d=\"M7 14h.01\"/><path d=\"M17 18h.01\"/>",
+        "bar-chart-3": "<path d=\"M3 3v18h18\"/><path d=\"M18 17V9\"/><path d=\"M13 17V5\"/><path d=\"M8 17v-3\"/>",
+        "at-sign": "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8\"/>",
+        "arrow-up-right": "<path d=\"M7 7h10v10\"/><path d=\"M7 17 17 7\"/>",
+        "arrow-down-left": "<path d=\"M17 7 7 17\"/><path d=\"M17 17H7V7\"/>"
+};
+
+        function refreshIcons() {
+            document.querySelectorAll('i[data-lucide]').forEach(function (el) {
+                const name = el.getAttribute('data-lucide');
+                const body = ICONS[name];
+                if (!body) { console.warn('Ikon tidak dikenal:', name); return; }
+                const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" ' +
+                    'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ' +
+                    'class="lucide lucide-' + name + ' ' + (el.getAttribute('class') || '') + '">' + body + '</svg>';
+                const t = document.createElement('template');
+                t.innerHTML = svg;
+                el.replaceWith(t.content.firstChild);
+            });
+        }
+
+        // Month names array for mapping
+        const monthNames = [
+            "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
+            "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ];
+
+        // Application State
+        let state = {
+            profile: {
+                name: 'Alex',
+                avatar: '',
+                monthlyBudget: 1000000
+            },
+            transactions: [
+                { id: 'tx_1', type: 'income', amount: 1500000, category: '💰 Uang Saku Utama', note: 'Uang Saku Bulanan', date: getISOFormatDate(0) },
+                { id: 'tx_2', type: 'expense', amount: 35000, category: '🍔 Makanan & Jajan', note: 'Makan Siang & Es Kopi', date: getISOFormatDate(0) },
+                { id: 'tx_3', type: 'expense', amount: 15000, category: '🛵 Transportasi', note: 'Ojek Online', date: getISOFormatDate(-1) },
+                { id: 'tx_4', type: 'expense', amount: 50000, category: '🎮 Hiburan & Game', note: 'Voucher Game', date: getISOFormatDate(-2) }
+            ],
+            plottedBudgets: {
+                '🍔 Makanan & Jajan': 400000,
+                '🛵 Transportasi': 200000
+            },
+            savingsGoals: [
+                { id: 'goal_1', title: 'Sepatu Sneaker Baru', target: 600000, current: 250000 }
+            ],
+            customCategories: []
+        };
+
+        let currentTxType = 'expense';
+        
+        // Dynamically initialize current date selection
+        const initialDateObj = new Date();
+        let selectedYear = initialDateObj.getFullYear();
+        let selectedMonth = initialDateObj.getMonth(); // 0-indexed
+        let selectedWeek = 'all'; // 'all', 1, 2, 3, 4
+        let myChart = null;
+        let expandedHomeCategories = {};
+        let expandedAnalyticsCategories = {};
+        let hasAlertedBoros = false;
+        let pendingConfirmAction = null;
+
+        // Robust ISO date parser ignoring client timezone offset
+        function parseIsoDate(dateStr) {
+            if (!dateStr) {
+                const d = new Date();
+                return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
+            }
+            const parts = dateStr.split('-');
+            return {
+                year: parseInt(parts[0], 10),
+                month: parseInt(parts[1], 10) - 1, // 0-indexed month
+                day: parseInt(parts[2], 10)
+            };
+        }
+
+        function initApp() {
+            setFaviconFromLogo();
+            initEmojiPickers();
+            (function () { const gr = byId('glass-range'); if (gr) { gr.value = window.__glassValue; window.applyGlass(gr.value, false); } })();
+
+            // Pengguna yang pernah masuk: buka instan dari data di perangkat (tanpa menunggu jaringan),
+            // lalu keabsahan loginnya dikonfirmasi Firebase di latar belakang.
+            const hint = readHint();
+            if (hint && lsGet(DATA_PREFIX + hint.uid)) {
+                session = {
+                    uid: hint.uid, email: hint.email || '', name: hint.name || nameFromEmail(hint.email),
+                    photo: hint.photo || '', provider: 'google', pending: true
+                };
+                enterApp(false);
+            }
+            initAuth();
+            refreshIcons();
+        }
+        // Jalankan segera setelah HTML siap (tidak menunggu CDN/gambar selesai dimuat)
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+        // Setelah semua sumber dimuat (mis. ikon dari CDN cadangan), render ulang ikon
+        window.addEventListener('load', function() { refreshIcons(); });
+
+        function renderAllViews() {
+            renderProfile();
+            renderQuickCategories();
+            renderTransactions();
+            renderPlottedCategories();
+            renderSavingsGoals();
+            renderDashboardSummary();
+            renderAnalytics();
+            refreshIcons();
+        }
+
+
+        function formatRupiah(num) {
+            return new Intl.NumberFormat('id-ID').format(num || 0);
+        }
+
+        function formatNumberInput(input) {
+            let val = input.value.replace(/\D/g, '');
+            if (!val) {
+                input.value = '';
+                return;
+            }
+            input.value = new Intl.NumberFormat('id-ID').format(parseInt(val, 10));
+        }
+
+        function parseFormattedNumber(valStr) {
+            if (!valStr) return 0;
+            const clean = valStr.toString().replace(/\D/g, '');
+            return parseInt(clean, 10) || 0;
+        }
+
+        function getTodayISODate() {
+            const d = new Date();
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getISOFormatDate(offsetDays = 0) {
+            const d = new Date();
+            d.setDate(d.getDate() + offsetDays);
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function setTxDateToToday() {
+            document.getElementById('tx-date').value = getTodayISODate();
+        }
+
+        function showToast(msg, icon = '✨') {
+            const toast = document.getElementById('toast-banner');
+            document.getElementById('toast-msg').innerText = msg;
+            document.getElementById('toast-icon').innerText = icon;
+
+            toast.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+            }, 3500);
+        }
+
+        function showConfirmModal(title, msg, onConfirm) {
+            document.getElementById('confirm-modal-title').innerText = title;
+            document.getElementById('confirm-modal-msg').innerText = msg;
+            pendingConfirmAction = onConfirm;
+            const btn = document.getElementById('confirm-modal-action-btn');
+            btn.onclick = function() {
+                if (pendingConfirmAction) pendingConfirmAction();
+                closeModal('confirm-modal');
+            };
+            openModal('confirm-modal');
+        }
+
+        function switchTab(tabName) {
+            ['home', 'analytics', 'budget'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`nav-${t}`);
+                if (btn) {
+                    btn.className = "nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-white transition active:scale-90";
+                }
+            });
+
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`nav-${tabName}`);
+            if (activeBtn) {
+                activeBtn.className = "nav-btn flex-1 flex flex-col items-center justify-center gap-0.5 text-purple-400 transition active:scale-90";
+            }
+
+            if (tabName === 'analytics') {
+                renderAnalytics();
+            }
+            currentTab = tabName;
+            saveUi();
+            refreshIcons();
+        }
+
+        function openModal(modalId) {
+            if (modalId === 'profile-modal') {
+                document.getElementById('profile-name-input').value = state.profile.name;
+                document.getElementById('profile-avatar-input').value = String(state.profile.avatar || '').startsWith('data:') ? '' : state.profile.avatar;
+                pendingAvatar = '';
+                renderPresetAvatars();
+                document.getElementById('profile-budget-input').value = formatRupiah(state.profile.monthlyBudget);
+            }
+            document.getElementById(modalId).classList.remove('hidden');
+            refreshIcons();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        /* Avatar bawaan: digambar sebagai SVG, jadi tidak butuh internet */
+        const PRESET_AVATARS = [
+            { emoji: '😎', a: '#8B5CF6', b: '#EC4899' },
+            { emoji: '🦊', a: '#F59E0B', b: '#EF4444' },
+            { emoji: '🐼', a: '#10B981', b: '#3B82F6' },
+            { emoji: '🚀', a: '#6366F1', b: '#06B6D4' }
+        ].map(function (x) {
+            const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'>" +
+                "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='" + x.a + "'/><stop offset='1' stop-color='" + x.b + "'/></linearGradient></defs>" +
+                "<rect width='150' height='150' fill='url(#g)'/>" +
+                "<text x='75' y='80' text-anchor='middle' dominant-baseline='central' font-size='78'>" + x.emoji + "</text></svg>";
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+        });
+        let pendingAvatar = '';
+
+        function renderPresetAvatars() {
+            const box = document.getElementById('preset-avatars');
+            if (!box) return;
+            box.innerHTML = '';
+            PRESET_AVATARS.forEach(function (url, i) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'w-9 h-9 rounded-xl border overflow-hidden flex-shrink-0 transition ' +
+                    (pendingAvatar === url ? 'border-purple-400 ring-2 ring-purple-400/60' : 'border-white/20');
+                btn.setAttribute('aria-label', 'Pilih avatar ' + (i + 1));
+                btn.onclick = function () { selectPresetAvatar(url); };
+                const img = document.createElement('img');
+                img.src = url; img.alt = ''; img.className = 'w-full h-full object-cover';
+                btn.appendChild(img);
+                box.appendChild(btn);
+            });
+        }
+
+        function selectPresetAvatar(url) {
+            // Isian URL dikosongkan; avatar bawaan dipakai saat profil disimpan
+            pendingAvatar = url;
+            document.getElementById('profile-avatar-input').value = '';
+            renderPresetAvatars();
+        }
+
+        function setTransactionType(type) {
+            currentTxType = type;
+            const btnExp = document.getElementById('type-expense');
+            const btnInc = document.getElementById('type-income');
+
+            if (type === 'expense') {
+                btnExp.className = "py-2 rounded-xl text-xs font-bold bg-rose-500/80 text-white transition shadow-md";
+                btnInc.className = "py-2 rounded-xl text-xs font-bold text-slate-400 transition";
+            } else {
+                btnInc.className = "py-2 rounded-xl text-xs font-bold bg-emerald-500/80 text-white transition shadow-md";
+                btnExp.className = "py-2 rounded-xl text-xs font-bold text-slate-400 transition";
+            }
+        }
+
+        function toggleCustomCategoryField(val) {
+            const group = document.getElementById('custom-category-group');
+            if (val === '__CUSTOM__') {
+                group.classList.remove('hidden');
+            } else {
+                group.classList.add('hidden');
+            }
+        }
+
+        function renderQuickCategories() {
+            renderCategoryOptions();
+            const container = document.getElementById('quick-categories-container');
+            const baseCategories = [
+                '🍔 Makanan & Jajan',
+                '🛵 Transportasi',
+                '🎮 Hiburan & Game',
+                '🛍️ Belanja & Kebutuhan',
+                '📚 Sekolah & Edukasi'
+            ];
+
+            const allCats = [...new Set([...baseCategories, ...state.customCategories])];
+            container.innerHTML = '';
+
+            allCats.forEach(cat => {
+                const parts = cat.split(' ');
+                const icon = parts[0] || '✨';
+                const name = parts.slice(1).join(' ') || cat;
+
+                const btn = document.createElement('button');
+                btn.onclick = () => quickAdd(cat);
+                btn.className = "flex-shrink-0 glass-pill px-3.5 py-2 rounded-2xl flex items-center gap-2 hover:bg-white/20 transition active:scale-95";
+                btn.innerHTML = `
+                    <span class="text-base">${icon}</span>
+                    <span class="text-xs font-semibold">${escapeHtml(name)}</span>
+                `;
+                container.appendChild(btn);
+            });
+        }
+
+        function quickAdd(catName) {
+            setTransactionType('expense');
+            document.getElementById('tx-edit-id').value = '';
+            document.getElementById('modal-tx-title').innerText = 'Catat Transaksi Baru';
+            
+            const select = document.getElementById('tx-category');
+            if (![...select.options].some(o => o.value === catName)) {
+                const opt = document.createElement('option');
+                opt.value = catName;
+                opt.innerText = catName;
+                select.appendChild(opt);
+            }
+            select.value = catName;
+            toggleCustomCategoryField(catName);
+            openModal('transaction-modal');
+        }
+
+        function handleSaveTransaction(e) {
+            e.preventDefault();
+
+            const editId = document.getElementById('tx-edit-id').value;
+            const amount = parseFormattedNumber(document.getElementById('tx-amount').value);
+            let category = document.getElementById('tx-category').value;
+            const note = document.getElementById('tx-note').value.trim();
+            const date = document.getElementById('tx-date').value;
+
+            if (category === '__CUSTOM__') {
+                const customEmoji = firstGrapheme(document.getElementById('custom-cat-emoji').value) || '🏷️';
+                const customName = document.getElementById('custom-cat-name').value.trim();
+                if (!customName) {
+                    showToast('Isi nama kategori custom kamu!', '⚠️');
+                    return;
+                }
+                category = `${customEmoji} ${customName}`;
+                if (!state.customCategories.includes(category)) {
+                    state.customCategories.push(category);
+                }
+            }
+
+            if (!amount || amount <= 0) {
+                showToast('Masukkan nominal yang valid!', '⚠️');
+                return;
+            }
+
+            if (editId) {
+                // Edit existing transaction
+                const idx = state.transactions.findIndex(t => t.id === editId);
+                if (idx !== -1) {
+                    state.transactions[idx] = { id: editId, type: currentTxType, amount, category, note, date };
+                }
+            } else {
+                // New transaction
+                const newTx = {
+                    id: 'tx_' + Date.now(),
+                    type: currentTxType,
+                    amount,
+                    category,
+                    note,
+                    date
+                };
+                state.transactions.unshift(newTx);
+            }
+
+            saveToLocalStorage();
+
+            // Check if expense in a plotted category exceeds plotting limit
+            if (currentTxType === 'expense' && state.plottedBudgets[category]) {
+                const plottedTarget = state.plottedBudgets[category];
+                const totalSpentInCat = state.transactions
+                    .filter(t => t.type === 'expense' && t.category === category)
+                    .reduce((sum, t) => sum + t.amount, 0);
+
+                if (totalSpentInCat > plottedTarget) {
+                    showToast(`⚠️ Pengeluaran ${category} melebihi target plotting!`, '🚨');
+                } else {
+                    showToast(`Transaksi Rp ${formatRupiah(amount)} berhasil disimpan!`, '🎉');
+                }
+            } else {
+                showToast(`Transaksi Rp ${formatRupiah(amount)} berhasil disimpan!`, '🎉');
+            }
+
+            // Reset form
+            document.getElementById('tx-edit-id').value = '';
+            document.getElementById('tx-amount').value = '';
+            document.getElementById('tx-note').value = '';
+            document.getElementById('custom-cat-name').value = '';
+            document.getElementById('custom-cat-emoji').value = '';
+            markEmoji(EMOJI_PICKERS[0]);
+
+            closeModal('transaction-modal');
+            renderAllViews();
+        }
+
+        function editTransaction(id) {
+            const tx = state.transactions.find(t => t.id === id);
+            if (!tx) return;
+
+            document.getElementById('tx-edit-id').value = tx.id;
+            document.getElementById('modal-tx-title').innerText = 'Edit Transaksi';
+            document.getElementById('tx-amount').value = formatRupiah(tx.amount);
+            document.getElementById('tx-note').value = tx.note;
+            document.getElementById('tx-date').value = tx.date;
+            setTransactionType(tx.type);
+
+            const select = document.getElementById('tx-category');
+            if (![...select.options].some(o => o.value === tx.category)) {
+                const opt = document.createElement('option');
+                opt.value = tx.category;
+                opt.innerText = tx.category;
+                select.appendChild(opt);
+            }
+            select.value = tx.category;
+            toggleCustomCategoryField(tx.category);
+
+            openModal('transaction-modal');
+        }
+
+        function deleteSingleTransaction(id) {
+            showConfirmModal(
+                'Hapus Transaksi',
+                'Apakah kamu yakin ingin menghapus transaksi ini?',
+                function() {
+                    state.transactions = state.transactions.filter(t => t.id !== id);
+                    saveToLocalStorage();
+                    renderAllViews();
+                    showToast('Transaksi dihapus', '🗑️️');
+                }
+            );
+        }
+
+        function clearAllTransactions() {
+            if (state.transactions.length === 0) {
+                showToast('Tidak ada transaksi untuk dihapus!', 'ℹ️');
+                return;
+            }
+            showConfirmModal(
+                'Hapus Semua Transaksi',
+                'Apakah kamu yakin ingin menghapus seluruh riwayat transaksi?',
+                function() {
+                    state.transactions = [];
+                    expandedHomeCategories = {};
+                    expandedAnalyticsCategories = {};
+                    saveToLocalStorage();
+                    renderAllViews();
+                    showToast('Semua transaksi telah dihapus!', '🧹');
+                }
+            );
+        }
+
+        function renderDashboardSummary() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+
+            let totalPlottedBudget = 0;
+            Object.values(state.plottedBudgets).forEach(val => totalPlottedBudget += val);
+
+            state.transactions.forEach(t => {
+                if (t.type === 'income') totalIncome += t.amount;
+                else totalExpense += t.amount;
+            });
+
+            // Separated Funds Logic
+            let nonPlottedExpenses = 0;
+
+            state.transactions.filter(t => t.type === 'expense').forEach(t => {
+                if (!state.plottedBudgets[t.category]) {
+                    nonPlottedExpenses += t.amount;
+                }
+            });
+
+            const mainAvailableBalance = totalIncome - totalPlottedBudget - nonPlottedExpenses;
+
+            document.getElementById('main-balance').innerText = formatRupiah(mainAvailableBalance);
+            document.getElementById('total-income').innerText = `Rp ${formatRupiah(totalIncome)}`;
+            document.getElementById('total-expense').innerText = `Rp ${formatRupiah(totalExpense)}`;
+            document.getElementById('summary-plotted-amount').innerText = `Rp ${formatRupiah(totalPlottedBudget)}`;
+
+            // Monthly Budget calculation for Indicator
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            const monthlyExpense = state.transactions
+                .filter(t => {
+                    const { year, month } = parseIsoDate(t.date);
+                    return t.type === 'expense' && month === currentMonth && year === currentYear;
+                })
+                .reduce((acc, t) => acc + t.amount, 0);
+
+            const budgetLimit = state.profile.monthlyBudget || 1000000;
+            const percentage = Math.min(100, Math.round((monthlyExpense / budgetLimit) * 100));
+
+            document.getElementById('budget-percentage').innerText = `${percentage}%`;
+            document.getElementById('budget-bar').style.width = `${percentage}%`;
+            document.getElementById('budget-used').innerText = `Rp ${formatRupiah(monthlyExpense)}`;
+            document.getElementById('budget-limit').innerText = `Rp ${formatRupiah(budgetLimit)}`;
+
+            // Health badge & Boros Notification Trigger
+            const badge = document.getElementById('health-badge');
+            if (percentage >= 100) {
+                badge.className = "px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse";
+                badge.innerText = "Boros! 🚨";
+                
+                if (!hasAlertedBoros) {
+                    showToast("🚨 PERINGATAN BOROS! Pengeluaran telah melebihi batas anggaran bulanan!", "⚠️");
+                    hasAlertedBoros = true;
+                }
+            } else if (percentage >= 80) {
+                badge.className = "px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                badge.innerText = "Hati-hati ⚠️";
+                hasAlertedBoros = false;
+            } else {
+                badge.className = "px-3 py-1 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                badge.innerText = "Aman 👍";
+                hasAlertedBoros = false;
+            }
+        }
+
+        function renderTransactions() {
+            const list = document.getElementById('transaction-list');
+            list.innerHTML = '';
+
+            if (state.transactions.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-8 text-slate-500">
+                        <span class="text-3xl">🍃</span>
+                        <p class="text-xs font-semibold mt-2">Belum ada transaksi</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Group transactions by category
+            const grouped = {};
+            state.transactions.forEach(t => {
+                if (!grouped[t.category]) {
+                    grouped[t.category] = {
+                        categoryName: t.category,
+                        totalAmount: 0,
+                        items: []
+                    };
+                }
+                grouped[t.category].items.push(t);
+                grouped[t.category].totalAmount += (t.type === 'expense' ? t.amount : -t.amount);
+            });
+
+            Object.values(grouped).forEach(group => {
+                const catKey = group.categoryName;
+                const isExpanded = !!expandedHomeCategories[catKey];
+                const parts = catKey.split(' ');
+                const icon = parts[0] || '💸';
+                const name = parts.slice(1).join(' ') || catKey;
+
+                const card = document.createElement('div');
+                card.className = "glass-card-dark rounded-2xl border border-white/10 overflow-hidden transition-all";
+
+                // Group Main Header
+                card.innerHTML = `
+                    <div onclick="toggleHomeCategoryExpand('${escapeHtml(catKey)}')" class="p-3.5 flex justify-between items-center cursor-pointer hover:bg-white/5 transition">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center justify-center font-bold text-base">
+                                ${icon}
+                            </div>
+                            <div>
+                                <h4 class="text-xs font-bold text-white">${escapeHtml(name)}</h4>
+                                <p class="text-[10px] text-slate-400">${group.items.length} transaksi recorded</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs font-extrabold ${group.totalAmount >= 0 ? 'text-rose-400' : 'text-emerald-400'}">
+                                ${group.totalAmount >= 0 ? '-' : '+'} Rp ${formatRupiah(Math.abs(group.totalAmount))}
+                            </span>
+                            <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4 text-slate-400"></i>
+                        </div>
+                    </div>
+                    ${isExpanded ? `
+                        <div class="border-t border-white/10 bg-slate-950/40 p-2 space-y-2">
+                            ${group.items.map(item => `
+                                <div class="p-2.5 rounded-xl bg-white/5 flex justify-between items-center text-xs">
+                                    <div>
+                                        <p class="font-semibold text-white">${escapeHtml(item.note)}</p>
+                                        <p class="text-[10px] text-slate-400">${formatDisplayDate(item.date)}</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-extrabold ${item.type === 'expense' ? 'text-rose-400' : 'text-emerald-400'}">
+                                            ${item.type === 'expense' ? '-' : '+'} Rp ${formatRupiah(item.amount)}
+                                        </span>
+                                        <button onclick="editTransaction('${item.id}')" class="p-1 text-slate-400 hover:text-purple-300" title="Edit">
+                                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                        <button onclick="deleteSingleTransaction('${item.id}')" class="p-1 text-slate-400 hover:text-rose-400" title="Hapus">
+                                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+
+                list.appendChild(card);
+            });
+
+            refreshIcons();
+        }
+
+        function toggleHomeCategoryExpand(catKey) {
+            expandedHomeCategories[catKey] = !expandedHomeCategories[catKey];
+            renderTransactions();
+        }
+
+        function formatDisplayDate(dateStr) {
+            const { year, month, day } = parseIsoDate(dateStr);
+            const monthName = monthNames[month] || '';
+            return `${day} ${monthName} ${year}`;
+        }
+
+        function renderPlottedCategories() {
+            const list = document.getElementById('plotted-category-list');
+            list.innerHTML = '';
+
+            const keys = Object.keys(state.plottedBudgets);
+            if (keys.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-6 text-slate-500 glass-card-dark rounded-2xl border border-white/5">
+                        <span class="text-2xl">📊</span>
+                        <p class="text-xs font-semibold mt-1">Belum ada plotting dana kategori</p>
+                    </div>
+                `;
+                return;
+            }
+
+            keys.forEach(cat => {
+                const targetAmount = state.plottedBudgets[cat];
+                const spentAmount = state.transactions
+                    .filter(t => t.type === 'expense' && t.category === cat)
+                    .reduce((sum, t) => sum + t.amount, 0);
+
+                const remaining = Math.max(0, targetAmount - spentAmount);
+                const percent = Math.min(100, Math.round((spentAmount / targetAmount) * 100));
+
+                const card = document.createElement('div');
+                card.className = "glass-card-dark p-4 rounded-2xl space-y-2 border border-white/10";
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-bold text-white flex items-center gap-1.5">${escapeHtml(cat)}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-extrabold text-purple-300">Target: Rp ${formatRupiah(targetAmount)}</span>
+                            <button onclick="deletePlotting('${escapeHtml(cat)}')" class="text-slate-500 hover:text-rose-400 p-0.5" title="Hapus Plotting">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden p-0.5 border border-white/5">
+                        <div class="bg-gradient-to-r ${percent >= 100 ? 'from-rose-500 to-red-500' : 'from-purple-500 to-pink-500'} h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                    </div>
+
+                    <div class="flex justify-between items-center text-[11px] text-slate-400">
+                        <span>Terpakai: <strong class="text-slate-200">Rp ${formatRupiah(spentAmount)}</strong></span>
+                        <span class="${remaining === 0 ? 'text-rose-400 font-bold' : 'text-emerald-300 font-bold'}">
+                            Sisa: Rp ${formatRupiah(remaining)}
+                        </span>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+
+            refreshIcons();
+        }
+
+        function handleSavePlotting(e) {
+            e.preventDefault();
+            const cat = document.getElementById('plotting-category-select').value;
+            const amount = parseFormattedNumber(document.getElementById('plotting-amount').value);
+
+            if (!amount || amount <= 0) {
+                showToast('Masukkan nominal plotting yang valid!', '⚠️');
+                return;
+            }
+
+            state.plottedBudgets[cat] = amount;
+            saveToLocalStorage();
+            closeModal('plotting-modal');
+            renderAllViews();
+            showToast(`Plotting Rp ${formatRupiah(amount)} disimpan!`, '🎯');
+        }
+
+        function deletePlotting(cat) {
+            showConfirmModal(
+                'Hapus Plotting',
+                `Hapus alokasi plotting untuk ${cat}?`,
+                function() {
+                    delete state.plottedBudgets[cat];
+                    saveToLocalStorage();
+                    renderAllViews();
+                    showToast('Plotting dihapus', '🗑️');
+                }
+            );
+        }
+
+        function renderSavingsGoals() {
+            const list = document.getElementById('savings-list');
+            list.innerHTML = '';
+
+            if (state.savingsGoals.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-6 text-slate-500">
+                        <span class="text-2xl">🎯</span>
+                        <p class="text-xs font-semibold mt-1">Belum ada target impian</p>
+                    </div>
+                `;
+                return;
+            }
+
+            state.savingsGoals.forEach(g => {
+                const percent = Math.min(100, Math.round((g.current / g.target) * 100));
+                const rem = Math.max(0, g.target - g.current);
+
+                const card = document.createElement('div');
+                card.className = "glass-card-dark p-4 rounded-3xl space-y-3 border border-white/10 relative overflow-hidden";
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="text-sm font-bold text-white">${escapeHtml(g.title)}</h4>
+                            <p class="text-[11px] text-slate-400">Target: Rp ${formatRupiah(g.target)}</p>
+                        </div>
+                        <button onclick="deleteSavingsGoal('${g.id}')" class="text-slate-500 hover:text-rose-400">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[11px]">
+                            <span class="text-pink-300 font-bold">Terkumpul: Rp ${formatRupiah(g.current)}</span>
+                            <span class="text-slate-400 font-semibold">${percent}%</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden p-0.5 border border-white/5">
+                            <div class="bg-gradient-to-r from-pink-500 to-rose-400 h-full rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center pt-1">
+                        <span class="text-[10px] text-slate-400">
+                            ${rem === 0 ? '🎉 Impian Tercapai!' : `Sisa Rp ${formatRupiah(rem)}`}
+                        </span>
+                        <button onclick="openDepositModal('${g.id}', '${escapeHtml(g.title)}')" class="px-3 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold flex items-center gap-1 hover:bg-emerald-500/30 transition">
+                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Tabung
+                        </button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+
+            refreshIcons();
+        }
+
+        function handleSaveSavingsGoal(e) {
+            e.preventDefault();
+            const title = document.getElementById('goal-title').value.trim();
+            const target = parseFormattedNumber(document.getElementById('goal-target').value);
+            const initial = parseFormattedNumber(document.getElementById('goal-initial').value);
+
+            if (!title || !target) {
+                showToast('Isi judul dan nominal target!', '⚠️️');
+                return;
+            }
+
+            state.savingsGoals.push({
+                id: 'goal_' + Date.now(),
+                title,
+                target,
+                current: initial
+            });
+
+            saveToLocalStorage();
+            closeModal('savings-modal');
+            renderSavingsGoals();
+            showToast('Target impian berhasil dibuat!', '🎯');
+        }
+
+        function deleteSavingsGoal(id) {
+            showConfirmModal(
+                'Hapus Target Impian',
+                'Apakah kamu yakin ingin menghapus target ini?',
+                function() {
+                    state.savingsGoals = state.savingsGoals.filter(g => g.id !== id);
+                    saveToLocalStorage();
+                    renderSavingsGoals();
+                    showToast('Target dihapus', '🗑️');
+                }
+            );
+        }
+
+        function openDepositModal(id, title) {
+            document.getElementById('deposit-goal-id').value = id;
+            document.getElementById('deposit-goal-name').innerText = `Target: ${title}`;
+            document.getElementById('deposit-amount').value = '';
+            openModal('deposit-modal');
+        }
+
+        function handleSaveDeposit(e) {
+            e.preventDefault();
+            const id = document.getElementById('deposit-goal-id').value;
+            const amount = parseFormattedNumber(document.getElementById('deposit-amount').value);
+
+            if (!amount || amount <= 0) {
+                showToast('Masukkan nominal tabungan!', '⚠️');
+                return;
+            }
+
+            const goal = state.savingsGoals.find(g => g.id === id);
+            if (goal) {
+                goal.current += amount;
+                saveToLocalStorage();
+                renderSavingsGoals();
+                closeModal('deposit-modal');
+                showToast(`Ditambahkan Rp ${formatRupiah(amount)} ke target!`, '💰');
+            }
+        }
+
+        function updateFilterLabels() {
+            document.getElementById('label-selected-month').innerText = monthNames[selectedMonth];
+            document.getElementById('label-selected-year').innerText = selectedYear;
+            document.getElementById('label-selected-week').innerText = selectedWeek === 'all' ? 'Semua Mgg' : `Minggu ${selectedWeek}`;
+        }
+
+        function openMonthSelectorModal() {
+            const container = document.getElementById('months-grid-container');
+            container.innerHTML = '';
+
+            monthNames.forEach((m, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => {
+                    selectedMonth = idx; saveUi();
+                    updateFilterLabels();
+                    closeModal('month-selector-modal');
+                    renderAnalytics();
+                };
+                btn.className = `py-2 px-1 rounded-xl text-xs font-bold transition ${selectedMonth === idx ? 'bg-purple-600 text-white shadow-md' : 'glass-pill text-slate-300 hover:bg-white/20'}`;
+                btn.innerText = m.substring(0, 3);
+                container.appendChild(btn);
+            });
+
+            openModal('month-selector-modal');
+        }
+
+        function openYearSelectorModal() {
+            const container = document.getElementById('years-grid-container');
+            container.innerHTML = '';
+
+            const currentYr = new Date().getFullYear();
+            const years = [];
+            for (let y = currentYr - 3; y <= currentYr + 6; y++) {
+                years.push(y);
+            }
+
+            years.forEach(yr => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => {
+                    selectedYear = yr; saveUi();
+                    updateFilterLabels();
+                    closeModal('year-selector-modal');
+                    renderAnalytics();
+                };
+                btn.className = `py-2 px-1 rounded-xl text-xs font-bold transition ${selectedYear === yr ? 'bg-purple-600 text-white shadow-md' : 'glass-pill text-slate-300 hover:bg-white/20'}`;
+                btn.innerText = yr;
+                container.appendChild(btn);
+            });
+
+            openModal('year-selector-modal');
+        }
+
+        function openWeekSelectorModal() {
+            const container = document.getElementById('weeks-list-container');
+            container.innerHTML = '';
+
+            const weeks = [
+                { id: 'all', label: 'Semua Minggu Dalam Bulan' },
+                { id: 1, label: 'Minggu 1 (Tgl 1 - 7)' },
+                { id: 2, label: 'Minggu 2 (Tgl 8 - 14)' },
+                { id: 3, label: 'Minggu 3 (Tgl 15 - 21)' },
+                { id: 4, label: 'Minggu 4 (Tgl 22 - Akhir)' }
+            ];
+
+            weeks.forEach(w => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => {
+                    selectedWeek = w.id; saveUi();
+                    updateFilterLabels();
+                    closeModal('week-selector-modal');
+                    renderAnalytics();
+                };
+                btn.className = `w-full py-2.5 px-3 text-left rounded-xl text-xs font-semibold transition ${selectedWeek === w.id ? 'bg-purple-600 text-white' : 'glass-pill text-slate-300 hover:bg-white/20'}`;
+                btn.innerText = w.label;
+                container.appendChild(btn);
+            });
+
+            openModal('week-selector-modal');
+        }
+
+        function renderAnalytics() {
+            let filteredTx = state.transactions.filter(t => t.type === 'expense');
+
+            // Filter by Month and Year using timezone-robust parser
+            filteredTx = filteredTx.filter(t => {
+                const { year, month, day } = parseIsoDate(t.date);
+                if (month !== selectedMonth || year !== selectedYear) return false;
+
+                if (selectedWeek !== 'all') {
+                    if (selectedWeek === 1) return day >= 1 && day <= 7;
+                    if (selectedWeek === 2) return day >= 8 && day <= 14;
+                    if (selectedWeek === 3) return day >= 15 && day <= 21;
+                    if (selectedWeek === 4) return day >= 22;
+                }
+                return true;
+            });
+
+            const monthTitle = monthNames[selectedMonth];
+            const weekTitle = selectedWeek === 'all' ? '' : `, Mgg ${selectedWeek}`;
+            document.getElementById('chart-period-title').innerText = `Statistik ${monthTitle} ${selectedYear}${weekTitle}`;
+
+            const catMap = {};
+            const catItemsMap = {};
+            let periodSum = 0;
+
+            filteredTx.forEach(t => {
+                periodSum += t.amount;
+                if (!catMap[t.category]) {
+                    catMap[t.category] = 0;
+                    catItemsMap[t.category] = [];
+                }
+                catMap[t.category] += t.amount;
+                catItemsMap[t.category].push(t);
+            });
+
+            document.getElementById('period-total').innerText = `Rp ${formatRupiah(periodSum)}`;
+
+            // Render Chart.js
+            renderChart(catMap);
+
+            // Render Accordion Category Breakdown
+            const breakdownContainer = document.getElementById('category-breakdown');
+            breakdownContainer.innerHTML = '';
+
+            const categoriesArr = Object.entries(catMap);
+            if (categoriesArr.length === 0) {
+                breakdownContainer.innerHTML = `
+                    <div class="text-center py-6 text-slate-500 glass-card-dark rounded-2xl border border-white/5">
+                        <span class="text-2xl">🍃</span>
+                        <p class="text-xs font-semibold mt-1">Belum ada data pengeluaran pada periode ini</p>
+                    </div>
+                `;
+                return;
+            }
+
+            categoriesArr.forEach(([catName, amount]) => {
+                const percent = periodSum > 0 ? Math.round((amount / periodSum) * 100) : 0;
+                const items = catItemsMap[catName] || [];
+                const isExpanded = !!expandedAnalyticsCategories[catName];
+
+                const card = document.createElement('div');
+                card.className = "glass-card-dark rounded-2xl border border-white/5 overflow-hidden transition-all";
+
+                card.innerHTML = `
+                    <div onclick="toggleAnalyticsCategoryExpand('${escapeHtml(catName)}')" class="p-3.5 space-y-2 cursor-pointer hover:bg-white/5 transition">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-white flex items-center gap-1">
+                                ${escapeHtml(catName)}
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-extrabold text-rose-300">Rp ${formatRupiah(amount)} (${percent}%)</span>
+                                <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4 text-slate-400"></i>
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                            <div class="bg-gradient-to-r from-purple-500 to-pink-500 h-full rounded-full" style="width: ${percent}%"></div>
+                        </div>
+                    </div>
+                    ${isExpanded ? `
+                        <div class="border-t border-white/10 bg-slate-950/40 p-2 space-y-2">
+                            ${items.map(it => `
+                                <div class="p-2 rounded-xl bg-white/5 flex justify-between items-center text-xs">
+                                    <div>
+                                        <p class="font-semibold text-white">${escapeHtml(it.note)}</p>
+                                        <p class="text-[10px] text-slate-400">${formatDisplayDate(it.date)}</p>
+                                    </div>
+                                    <span class="font-extrabold text-rose-400">- Rp ${formatRupiah(it.amount)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                `;
+                breakdownContainer.appendChild(card);
+            });
+
+            refreshIcons();
+        }
+
+        function toggleAnalyticsCategoryExpand(catName) {
+            expandedAnalyticsCategories[catName] = !expandedAnalyticsCategories[catName];
+            renderAnalytics();
+        }
+
+        function renderChart(catMap) {
+            if (typeof window.Chart === 'undefined') return; // Chart.js gagal dimuat: lewati grafik, bagian lain tetap jalan
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            const labels = Object.keys(catMap);
+            const data = Object.values(catMap);
+
+            if (labels.length === 0) {
+                myChart = new window.Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Tidak Ada Data'],
+                        datasets: [{ data: [1], backgroundColor: ['rgba(255, 255, 255, 0.1)'] }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        cutout: '70%'
+                    }
+                });
+                return;
+            }
+
+            const colors = ['#a855f7', '#ec4899', '#f43f5e', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'];
+
+            myChart = new window.Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#e2e8f0',
+                                font: { size: 10, family: 'Plus Jakarta Sans' },
+                                boxWidth: 10
+                            }
+                        }
+                    },
+                    cutout: '68%'
+                }
+            });
+        }
+
+        function renderProfile() {
+            document.getElementById('user-name-display').innerText = `Halo, ${state.profile.name}! 👋`;
+            const av = document.getElementById('user-avatar');
+            av.onerror = function() { av.onerror = null; av.src = initialsAvatar(state.profile.name); };
+            av.src = state.profile.avatar || initialsAvatar(state.profile.name);
+            if (session) {
+                document.getElementById('profile-account-email').textContent = session.email;
+                document.getElementById('profile-account-provider').textContent = providerLabel(session);
+            }
+            updateInstallCard();
+        }
+
+        function handleSaveProfile(e) {
+            e.preventDefault();
+            const name = document.getElementById('profile-name-input').value.trim();
+            const avatar = document.getElementById('profile-avatar-input').value.trim();
+            const budget = parseFormattedNumber(document.getElementById('profile-budget-input').value);
+
+            state.profile.name = name || 'Alex';
+            state.profile.avatar = avatar || pendingAvatar || state.profile.avatar;
+            pendingAvatar = '';
+            state.profile.monthlyBudget = budget || 1000000;
+
+            saveToLocalStorage();
+            renderAllViews();
+            closeModal('profile-modal');
+            showToast('Profil iWallet berhasil diperbarui!', '✨');
+        }
+
+
+        /* =====================================================================
+           EKSPOR EXCEL (.xlsx) - dibuat langsung di aplikasi, tanpa library/internet.
+           .xlsx = arsip ZIP berisi XML; teks disimpan sebagai Unicode sehingga
+           emoji dan huruf tidak rusak seperti pada CSV.
+           ===================================================================== */
+        const _CRC_TABLE = (function () {
+            const t = new Uint32Array(256);
+            for (let n = 0; n < 256; n++) {
+                let c = n;
+                for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+                t[n] = c >>> 0;
+            }
+            return t;
+        })();
+
+        function crc32(bytes) {
+            let c = 0xFFFFFFFF;
+            for (let i = 0; i < bytes.length; i++) c = _CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+            return (c ^ 0xFFFFFFFF) >>> 0;
+        }
+
+        function makeZip(files) {
+            const enc = new TextEncoder();
+            const now = new Date();
+            const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+            const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+            const parts = [], central = [];
+            let offset = 0;
+            files.forEach(function (f) {
+                const name = enc.encode(f.name), data = f.data, crc = crc32(data);
+                const lh = new Uint8Array(30 + name.length), lv = new DataView(lh.buffer);
+                lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); lv.setUint16(6, 0x0800, true);
+                lv.setUint16(8, 0, true); lv.setUint16(10, dosTime, true); lv.setUint16(12, dosDate, true);
+                lv.setUint32(14, crc, true); lv.setUint32(18, data.length, true); lv.setUint32(22, data.length, true);
+                lv.setUint16(26, name.length, true); lv.setUint16(28, 0, true);
+                lh.set(name, 30);
+                const ch = new Uint8Array(46 + name.length), cv = new DataView(ch.buffer);
+                cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true); cv.setUint16(8, 0x0800, true);
+                cv.setUint16(10, 0, true); cv.setUint16(12, dosTime, true); cv.setUint16(14, dosDate, true);
+                cv.setUint32(16, crc, true); cv.setUint32(20, data.length, true); cv.setUint32(24, data.length, true);
+                cv.setUint16(28, name.length, true); cv.setUint32(42, offset, true);
+                ch.set(name, 46);
+                parts.push(lh, data); central.push(ch);
+                offset += lh.length + data.length;
+            });
+            const cdSize = central.reduce((n, c) => n + c.length, 0);
+            const end = new Uint8Array(22), ev = new DataView(end.buffer);
+            ev.setUint32(0, 0x06054b50, true); ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true);
+            ev.setUint32(12, cdSize, true); ev.setUint32(16, offset, true);
+            return new Blob(parts.concat(central, [end]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        }
+
+        function xmlEsc(v) {
+            return String(v == null ? '' : v)
+                .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function buildXlsxBlob(rows) {
+            // rows[0] = judul kolom; sel bertipe number dibuat sebagai angka, selain itu teks
+            const colLetter = (i) => String.fromCharCode(65 + i);
+            let sheetRows = '';
+            rows.forEach(function (row, r) {
+                let cells = '';
+                row.forEach(function (val, c) {
+                    const ref = colLetter(c) + (r + 1);
+                    if (r === 0) {
+                        cells += '<c r="' + ref + '" t="inlineStr" s="1"><is><t>' + xmlEsc(val) + '</t></is></c>';
+                    } else if (typeof val === 'number') {
+                        cells += '<c r="' + ref + '" s="' + (c === 2 ? 2 : 0) + '"><v>' + val + '</v></c>';
+                    } else {
+                        cells += '<c r="' + ref + '" t="inlineStr"><is><t xml:space="preserve">' + xmlEsc(val) + '</t></is></c>';
+                    }
+                });
+                sheetRows += '<row r="' + (r + 1) + '">' + cells + '</row>';
+            });
+            const lastRef = colLetter(rows[0].length - 1) + rows.length;
+            const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+            const sheet = X + '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+                '<dimension ref="A1:' + lastRef + '"/>' +
+                '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
+                '<cols><col min="1" max="1" width="34" customWidth="1"/><col min="2" max="2" width="28" customWidth="1"/>' +
+                '<col min="3" max="3" width="16" customWidth="1"/><col min="4" max="4" width="10" customWidth="1"/>' +
+                '<col min="5" max="5" width="12" customWidth="1"/><col min="6" max="6" width="9" customWidth="1"/></cols>' +
+                '<sheetData>' + sheetRows + '</sheetData></worksheet>';
+            const styles = X + '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+                '<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0;[Red]\\-#,##0"/></numFmts>' +
+                '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>' +
+                '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+                '<fill><patternFill patternType="solid"><fgColor rgb="FF7C3AED"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+                '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+                '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+                '<cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+                '<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/>' +
+                '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>' +
+                '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+            const files = [
+                { name: '[Content_Types].xml', text: X + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+                    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+                    '<Default Extension="xml" ContentType="application/xml"/>' +
+                    '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+                    '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+                    '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
+                { name: '_rels/.rels', text: X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+                { name: 'xl/workbook.xml', text: X + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+                    '<sheets><sheet name="Laporan" sheetId="1" r:id="rId1"/></sheets></workbook>' },
+                { name: 'xl/_rels/workbook.xml.rels', text: X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+                    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+                    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
+                { name: 'xl/styles.xml', text: styles },
+                { name: 'xl/worksheets/sheet1.xml', text: sheet }
+            ];
+            const enc = new TextEncoder();
+            return makeZip(files.map(f => ({ name: f.name, data: enc.encode(f.text) })));
+        }
+
+        function saveBlobAsFile(blob, filename, okMessage, icon) {
+            const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            // iPhone yang dipasang di Layar Utama sering tidak bisa mengunduh blob: pakai menu Bagikan
+            if (isIos && isStandalone() && navigator.canShare && window.File) {
+                const file = new File([blob], filename, { type: blob.type });
+                if (navigator.canShare({ files: [file] })) {
+                    navigator.share({ files: [file], title: filename }).catch(function () {});
+                    return;
+                }
+            }
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+            showToast(okMessage, icon);
+        }
+
+        function exportToExcel() {
+            if (state.transactions.length === 0) {
+                showToast('Tidak ada transaksi untuk diekspor!', '⚠️');
+                return;
+            }
+            const rows = [['Nama Pengeluaran', 'Kategori', 'Harga', 'Tanggal', 'Bulan', 'Tahun']];
+            state.transactions.forEach(function (t) {
+                const d = parseIsoDate(t.date);
+                rows.push([t.note || '', t.category || '', (t.type === 'expense' ? -1 : 1) * Number(t.amount || 0), d.day, monthNames[d.month], d.year]);
+            });
+            saveBlobAsFile(buildXlsxBlob(rows), 'iWallet_Laporan_' + getTodayISODate() + '.xlsx', 'Laporan Excel berhasil diunduh!', '📊');
+        }
+
+        function exportToSpreadsheetCSV() {
+            if (state.transactions.length === 0) {
+                showToast('Tidak ada transaksi untuk diekspor!', '⚠️');
+                return;
+            }
+
+            // UTF-8 BOM prefix (\uFEFF) ensures Excel opens emojis and text properly
+            let csv = "\uFEFFNama Pengeluaran,Kategori,Harga,Tanggal,Bulan,Tahun\n";
+            state.transactions.forEach(t => {
+                const { year, month, day } = parseIsoDate(t.date);
+                const isExp = t.type === 'expense';
+                const prefix = isExp ? '-' : '+';
+                csv += `"${escapeCsv(t.note)}","${escapeCsv(t.category)}","${prefix}${t.amount}","${day}","${monthNames[month]}","${year}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `iWallet_Laporan_Spreadsheet_${getTodayISODate()}.csv`);
+            a.click();
+            showToast('Laporan CSV berhasil diunduh!', '📊');
+        }
+
+        function escapeCsv(str) {
+            return String(str || '').replace(/"/g, '""');
+        }
+
+        function resetAllAppData() {
+            showConfirmModal(
+                'Reset Seluruh Data',
+                'Apakah kamu yakin ingin MERESET SELURUH DATA iWallet? Semua transaksi, plotting, dan target akan dihapus, termasuk salinannya di cloud dan di perangkat lain.',
+                async function() {
+                    state = freshState(session ? session.name : '', session ? session.photo : '');
+                    lastSavedJson = '';
+                    saveToLocalStorage();
+                    await syncBeforeLeave(5000);
+                    window.__skipFlush = true;
+                    lsDel(LEGACY_KEY);
+                    lsDel('sisasaku_app_state');
+                    if (session) lsDel(UI_PREFIX + session.uid);
+                    location.reload();
+                }
+            );
+        }
+
+
+        /* =====================================================================
+           LOGIN GOOGLE + PENYIMPANAN + SINKRONISASI CLOUD
+           - Identitas   : akun Google (Firebase Auth). Satu akun = satu UID di semua perangkat.
+           - Data aplikasi: localStorage 'iwallet_data::<uid>' (cache cepat & offline)
+                            + Firestore users/<uid> (sumber bersama untuk HP, tablet, laptop)
+           - Status sync  : localStorage 'iwallet_sync::<uid>' (versi terakhir & ada perubahan belum terkirim)
+           - Preferensi UI: localStorage 'iwallet_ui::<uid>' (filter bulan/tahun/minggu)
+           - 'iwallet_last_user' hanya petunjuk agar aplikasi terbuka instan; bukan bukti login.
+           ===================================================================== */
+        const HINT_KEY = 'iwallet_last_user';
+        const LEGACY_KEY = 'iwallet_app_state';
+        const LEGACY_CLAIM_KEY = 'iwallet_legacy_claimed';
+        const DATA_PREFIX = 'iwallet_data::';
+        const UI_PREFIX = 'iwallet_ui::';
+        const SYNC_PREFIX = 'iwallet_sync::';
+        const CLIENT_ID = 'c' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+        let session = null;
+        let currentTab = 'home';
+        let storageWarned = false;
+        let lastSavedJson = '';
+        let syncMeta = { baseRev: 0, dirty: false, syncedAt: 0 };
+        let syncStatus = 'off';
+        let pushTimer = null, pushing = false, unwatch = null;
+        let applyingRemote = false, userInitiatedLogin = false, firstRemoteSeen = false;
+
+        const byId = (id) => document.getElementById(id);
+
+        /* ---------- localStorage aman (tidak crash jika diblokir) ---------- */
+        function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+        function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+        function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+
+        function readHint() {
+            try {
+                const h = JSON.parse(lsGet(HINT_KEY) || 'null');
+                return (h && typeof h.uid === 'string' && h.uid) ? h : null;
+            } catch (e) { return null; }
+        }
+
+        function dataKey() { return DATA_PREFIX + (session ? session.uid : 'guest'); }
+        function syncKey() { return SYNC_PREFIX + (session ? session.uid : 'guest'); }
+
+        function readSyncMeta() {
+            try {
+                const m = JSON.parse(lsGet(syncKey()) || 'null');
+                if (m && typeof m === 'object') return { baseRev: +m.baseRev || 0, dirty: !!m.dirty, syncedAt: +m.syncedAt || 0 };
+            } catch (e) {}
+            return { baseRev: 0, dirty: false, syncedAt: 0 };
+        }
+        function writeSyncMeta() { lsSet(syncKey(), JSON.stringify(syncMeta)); }
+
+        /* ---------- Helper nama & avatar ---------- */
+        function nameFromEmail(email) {
+            const first = String(email || '').split('@')[0]
+                .replace(/[._\-+]+/g, ' ').replace(/\d+/g, ' ').trim().split(/\s+/)[0] || 'Kamu';
+            return first.charAt(0).toUpperCase() + first.slice(1, 20);
+        }
+
+        function initialsAvatar(name) {
+            const ch = (String(name || '?').trim().charAt(0) || '?').toUpperCase()
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'>" +
+                "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='#8B5CF6'/><stop offset='1' stop-color='#EC4899'/></linearGradient></defs>" +
+                "<rect width='150' height='150' fill='url(#g)'/>" +
+                "<text x='75' y='78' text-anchor='middle' dominant-baseline='central' font-family='Arial,Helvetica,sans-serif' font-size='70' font-weight='700' fill='white'>" + ch + "</text></svg>";
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+        }
+
+        function isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
+
+        /* ---------- State per akun ---------- */
+        function freshState(name, photo) {
+            return {
+                profile: {
+                    name: name || 'Kamu',
+                    avatar: photo || initialsAvatar(name || 'K'),
+                    monthlyBudget: 1000000
+                },
+                transactions: [],
+                plottedBudgets: {},
+                savingsGoals: [],
+                customCategories: []
+            };
+        }
+
+        function normalizeState(p) {
+            const b = freshState('');
+            p = (p && typeof p === 'object') ? p : {};
+            return {
+                ...b, ...p,
+                profile: { ...b.profile, ...(p.profile || {}) },
+                transactions: Array.isArray(p.transactions) ? p.transactions : [],
+                plottedBudgets: (p.plottedBudgets && typeof p.plottedBudgets === 'object') ? p.plottedBudgets : {},
+                savingsGoals: Array.isArray(p.savingsGoals) ? p.savingsGoals : [],
+                customCategories: Array.isArray(p.customCategories) ? p.customCategories : []
+            };
+        }
+
+        /* Dipanggil setiap data berubah. Menulis ke perangkat, lalu menjadwalkan kirim ke cloud.
+           Jika isi tidak berubah, tidak terjadi apa-apa (supaya tidak menimpa data perangkat lain). */
+        function saveToLocalStorage() {
+            if (!session) return;
+            let json;
+            try { json = JSON.stringify(state); } catch (e) { return; }
+            if (json === lastSavedJson) return;
+            const ok = lsSet(dataKey(), json);
+            if (!ok && !storageWarned) {
+                storageWarned = true;
+                showToast('Penyimpanan browser tidak tersedia, data hanya tersimpan di cloud.', '⚠️');
+            }
+            lastSavedJson = json;
+            if (!applyingRemote) {
+                syncMeta.dirty = true;
+                writeSyncMeta();
+                scheduleSync(1200);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            if (!session) return;
+            syncMeta = readSyncMeta();
+            let raw = lsGet(dataKey());
+            let fromOwnKey = !!raw;
+
+            // Migrasi data lama: (1) disimpan per email, (2) sebelum ada login sama sekali
+            if (!raw) {
+                const byEmail = session.email ? lsGet(DATA_PREFIX + session.email) : null;
+                if (byEmail) {
+                    raw = byEmail;
+                } else {
+                    const legacy = lsGet(LEGACY_KEY);
+                    if (legacy && !lsGet(LEGACY_CLAIM_KEY)) {
+                        raw = legacy;
+                        lsSet(LEGACY_CLAIM_KEY, session.email || session.uid);
+                    }
+                }
+            }
+
+            if (raw) {
+                try { state = normalizeState(JSON.parse(raw)); }
+                catch (e) {
+                    console.error('Failed to parse stored state', e);
+                    lsSet(dataKey() + '::backup', raw); // simpan cadangan data rusak
+                    state = freshState(session.name, session.photo);
+                    fromOwnKey = false;
+                }
+                // Data yang belum pernah dikirim ke cloud harus ikut diunggah
+                if (!lsGet(syncKey()) || !fromOwnKey) { syncMeta.dirty = true; writeSyncMeta(); }
+                lastSavedJson = fromOwnKey ? JSON.stringify(state) : '';
+            } else {
+                // Perangkat baru: mulai kosong dan tunggu data dari cloud (tidak ditandai "berubah")
+                state = freshState(session.name, session.photo);
+                lsSet(dataKey(), JSON.stringify(state));
+                lastSavedJson = JSON.stringify(state);
+            }
+        }
+
+        function saveUi() {
+            if (!session) return;
+            lsSet(UI_PREFIX + session.uid, JSON.stringify({
+                tab: currentTab, year: selectedYear, month: selectedMonth, week: selectedWeek
+            }));
+        }
+
+        function loadUi() {
+            const now = new Date();
+            currentTab = 'home';
+            selectedYear = now.getFullYear();
+            selectedMonth = now.getMonth();
+            selectedWeek = 'all';
+            const raw = session ? lsGet(UI_PREFIX + session.uid) : null;
+            if (!raw) return;
+            try {
+                const u = JSON.parse(raw);
+                // Tab terakhir sengaja tidak dipulihkan: aplikasi selalu dibuka di Dashboard.
+                if (Number.isInteger(u.year)) selectedYear = u.year;
+                if (Number.isInteger(u.month) && u.month >= 0 && u.month < 12) selectedMonth = u.month;
+                if (u.week === 'all' || [1, 2, 3, 4].includes(u.week)) selectedWeek = u.week;
+            } catch (e) {}
+        }
+
+        /* Simpan seluruh data saat pengguna meninggalkan / menutup aplikasi */
+        function flushAll() {
+            if (window.__skipFlush || !session) return;
+            saveToLocalStorage();
+            saveUi();
+        }
+        window.addEventListener('pagehide', flushAll);
+        window.addEventListener('beforeunload', flushAll);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') flushAll();
+        });
+
+        /* ---------- Masuk / keluar aplikasi ---------- */
+        function enterApp(justLoggedIn) {
+            loadFromLocalStorage();
+            loadUi();
+            byId('login-screen').classList.add('login-hidden');
+            updateFilterLabels();
+            renderAllViews();
+            setTxDateToToday();
+            switchTab(currentTab);
+            saveToLocalStorage();
+            if (justLoggedIn) showToast('Selamat datang, ' + state.profile.name + '!', '👋');
+        }
+
+        function providerLabel(s) {
+            return s ? 'Masuk dengan Google' : '';
+        }
+
+        function persistHint() {
+            if (!session) return;
+            lsSet(HINT_KEY, JSON.stringify({ uid: session.uid, email: session.email, name: session.name, photo: session.photo }));
+        }
+
+        function friendlyName(user) {
+            const first = String(user.displayName || '').trim().split(/\s+/)[0];
+            return first ? first.slice(0, 20) : nameFromEmail(user.email);
+        }
+
+        /* ---------- Layar login ---------- */
+        function showLogin(mode) {
+            byId('login-screen').classList.remove('login-hidden');
+            byId('login-checking').classList.toggle('hidden', mode !== 'checking');
+            byId('login-config').classList.toggle('hidden', mode !== 'config');
+            byId('login-main').classList.toggle('hidden', mode !== 'main');
+        }
+        function showLoginError(msg) {
+            const el = byId('login-error');
+            if (!msg) { el.classList.add('hidden'); return; }
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+        function setGoogleBusy(busy, label) {
+            const b = byId('btn-google');
+            b.disabled = !!busy;
+            byId('btn-google-label').textContent = label || (busy ? 'Membuka Google...' : 'Lanjutkan dengan Google');
+        }
+
+        function isEmbeddedBrowser() {
+            // Google menolak login OAuth di WebView (Instagram, Facebook, TikTok, dll.)
+            return /FBAN|FBAV|Instagram|Line\/|MicroMessenger|TikTok|Snapchat|; wv\)|WebView/i.test(navigator.userAgent || '');
+        }
+
+        function authErrorMessage(e) {
+            const c = (e && e.code) ? e.code : '';
+            if (c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request' || c === 'auth/user-cancelled') return '';
+            if (c === 'auth/network-request-failed') return 'Tidak ada koneksi internet. Sambungkan dulu, lalu coba lagi.';
+            if (c === 'auth/unauthorized-domain') return 'Alamat situs ini belum didaftarkan di Firebase (Authentication → Settings → Authorized domains).';
+            if (c === 'auth/operation-not-allowed') return 'Login Google belum diaktifkan di Firebase Authentication.';
+            if (c === 'auth/too-many-requests') return 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.';
+            if (c === 'auth/user-disabled') return 'Akun ini dinonaktifkan.';
+            if (c === 'auth/web-storage-unsupported' || c === 'auth/operation-not-supported-in-this-environment') {
+                return 'Browser ini memblokir penyimpanan yang dibutuhkan untuk masuk. Aktifkan penyimpanan situs, atau buka lewat Chrome/Safari.';
+            }
+            return 'Gagal masuk dengan Google' + (c ? ' (' + c + ')' : '') + '. Coba lagi.';
+        }
+
+        async function signInWithGoogle() {
+            if (!window.IWCloud) { location.reload(); return; }
+            if (!window.IWCloud.configured) { showLogin('config'); return; }
+            showLoginError('');
+            if (isEmbeddedBrowser()) {
+                showLoginError('Google tidak mengizinkan masuk dari browser di dalam aplikasi (Instagram, Facebook, TikTok, dll.). Buka iWallet lewat Chrome atau Safari.');
+                return;
+            }
+            setGoogleBusy(true);
+            userInitiatedLogin = true;
+            try {
+                const r = await window.IWCloud.signInGoogle();
+                if (r && r.redirecting) return; // halaman akan berpindah ke Google
+            } catch (e) {
+                userInitiatedLogin = false;
+                showLoginError(authErrorMessage(e));
+            }
+            setGoogleBusy(false);
+        }
+
+        /* ---------- Memuat modul cloud (Firebase) tanpa menghambat tampilan awal ---------- */
+        function loadCloud() {
+            return new Promise(function (resolve) {
+                if (window.IWCloud) { resolve(window.IWCloud); return; }
+                let done = false;
+                const finish = function (v) { if (!done) { done = true; resolve(v); } };
+                window.addEventListener('iwallet:cloud', function () { finish(window.IWCloud || null); }, { once: true });
+                const el = document.createElement('script');
+                el.type = 'module';
+                el.src = 'cloud.js';
+                el.onerror = function () { finish(null); };
+                document.head.appendChild(el);
+                setTimeout(function () { finish(window.IWCloud || null); }, 12000);
+            });
+        }
+
+        let cloudFailed = false;
+
+        async function initAuth() {
+            if (!session) showLogin('checking');
+            const C = await loadCloud();
+            if (!C) {
+                cloudFailed = true;
+                if (session) {
+                    setSync('off', 'Layanan Google belum bisa dimuat. Kamu memakai data yang tersimpan di perangkat ini.');
+                } else {
+                    showLogin('main');
+                    setGoogleBusy(false, 'Coba lagi');
+                    showLoginError('Layanan masuk Google belum bisa dimuat. Periksa koneksi internet, lalu tekan Coba lagi.');
+                }
+                return;
+            }
+            if (!C.configured) {
+                if (!session) showLogin('config');
+                else setSync('off', 'Firebase belum dikonfigurasi (lihat PANDUAN-SETUP.md).');
+                if (C.error) console.error('Firebase gagal diinisialisasi:', C.error);
+                return;
+            }
+            C.onAuth(onAuthChanged, function (e) {
+                if (!session) { showLogin('main'); showLoginError(authErrorMessage(e)); }
+            });
+        }
+
+        function onAuthChanged(user, err) {
+            if (err) {
+                if (!session) { showLogin('main'); showLoginError(authErrorMessage(err)); }
+                return;
+            }
+            if (!user) {
+                if (session) endLocalSession();
+                showLogin('main');
+                setGoogleBusy(false);
+                return;
+            }
+            if (user.email && user.emailVerified === false) {
+                window.IWCloud.signOutAndClear();
+                showLogin('main');
+                showLoginError('Email akun ini belum terverifikasi oleh Google.');
+                return;
+            }
+            if (session && session.uid === user.uid) {
+                // Sesi lokal yang tadi dibuka instan kini terkonfirmasi
+                session.pending = false;
+                session.email = (user.email || session.email || '').toLowerCase();
+                if (user.photoURL) session.photo = user.photoURL;
+                persistHint();
+                renderProfile();
+                startSync();
+                return;
+            }
+            if (session) endLocalSession(); // berganti akun
+            startSession(user);
+        }
+
+        function startSession(user) {
+            session = {
+                uid: user.uid,
+                email: (user.email || '').toLowerCase(),
+                name: friendlyName(user),
+                photo: user.photoURL || '',
+                provider: 'google',
+                loginAt: Date.now()
+            };
+            persistHint();
+            const announce = userInitiatedLogin;
+            userInitiatedLogin = false;
+            enterApp(announce);
+            startSync();
+        }
+
+        function endLocalSession() {
+            stopSync();
+            session = null;
+            lastSavedJson = '';
+            syncMeta = { baseRev: 0, dirty: false, syncedAt: 0 };
+            state = freshState('');
+            lsDel(HINT_KEY);
+            closeModal('profile-modal');
+        }
+
+        function logoutUser() {
+            showConfirmModal(
+                'Keluar dari iWallet',
+                'Kamu akan keluar dari akun ini. Datamu aman di akun Google-mu dan muncul lagi saat masuk, di perangkat mana pun.',
+                async function () {
+                    if (!window.IWCloud || !window.IWCloud.configured) {
+                        showToast('Belum bisa keluar: layanan Google belum termuat. Coba lagi saat online.', '⚠️');
+                        return;
+                    }
+                    flushAll();
+                    closeModal('profile-modal');
+                    await syncBeforeLeave(5000);
+                    const uid = session ? session.uid : null;
+                    const unsynced = syncMeta.dirty;
+                    await window.IWCloud.signOutAndClear();
+                    lsDel(HINT_KEY);
+                    // Hapus salinan lokal agar aman di perangkat bersama, kecuali masih ada perubahan yang belum terkirim
+                    if (uid && !unsynced) { lsDel(DATA_PREFIX + uid); lsDel(UI_PREFIX + uid); lsDel(SYNC_PREFIX + uid); }
+                    window.__skipFlush = true;
+                    location.reload();
+                }
+            );
+        }
+
+        /* =====================================================================
+           SINKRONISASI CLOUD (HP ↔ tablet ↔ laptop)
+           - Setiap perubahan disimpan di perangkat dulu, lalu dikirim ke Firestore (debounce).
+           - Perubahan dari perangkat lain tiba real-time lewat listener.
+           - Kontrol versi (rev): jika dua perangkat mengubah data bersamaan, datanya digabung,
+             bukan saling menimpa.
+           ===================================================================== */
+        const SYNC_UI = {
+            off:     { c: '#94a3b8', t: 'Sinkronisasi nonaktif', d: 'Data hanya tersimpan di perangkat ini.' },
+            syncing: { c: '#f59e0b', t: 'Menyinkronkan...',      d: 'Mengirim dan mengambil data terbaru.' },
+            synced:  { c: '#10b981', t: 'Tersinkron',            d: 'Data sama di semua perangkat.' },
+            offline: { c: '#64748b', t: 'Sedang offline',        d: 'Perubahan aman di perangkat dan dikirim otomatis saat online.' },
+            error:   { c: '#f43f5e', t: 'Sinkronisasi bermasalah', d: 'Akan dicoba lagi otomatis.' }
+        };
+
+        function setSync(status, detail) {
+            syncStatus = status;
+            const u = SYNC_UI[status] || SYNC_UI.off;
+            const dot = byId('sync-dot');
+            if (dot) {
+                dot.style.background = u.c;
+                dot.style.boxShadow = '0 0 0 3px ' + u.c + '33';
+                dot.classList.toggle('is-syncing', status === 'syncing');
+            }
+            const title = byId('sync-title'), det = byId('sync-detail');
+            if (title) title.textContent = u.t;
+            if (det) {
+                let d = detail || u.d;
+                if (!detail && status === 'synced' && session && session.email) d = 'Sama di semua perangkat dengan akun ' + session.email;
+                det.textContent = d;
+            }
+            const hd = byId('user-status-dot');
+            if (hd) { hd.style.backgroundColor = u.c; hd.title = u.t; }
+        }
+
+        function idTime(id) {
+            const m = /_(\d{10,})/.exec(String(id));
+            return m ? parseInt(m[1], 10) : 0;
+        }
+
+        /* Gabungkan data cloud (dasar) dengan perubahan lokal yang belum terkirim.
+           Item lokal yang tidak ada di cloud dipertahankan hanya jika dibuat setelah sinkron terakhir
+           (item lama yang hilang berarti sudah dihapus di perangkat lain). */
+        function mergeStates(remote, local, since) {
+            const out = normalizeState(JSON.parse(JSON.stringify(remote)));
+            const txIds = new Set(out.transactions.map(function (t) { return t.id; }));
+            local.transactions.forEach(function (t) { if (!txIds.has(t.id) && idTime(t.id) >= since) out.transactions.push(t); });
+            const gIds = new Set(out.savingsGoals.map(function (g) { return g.id; }));
+            local.savingsGoals.forEach(function (g) { if (!gIds.has(g.id) && idTime(g.id) >= since) out.savingsGoals.push(g); });
+            out.customCategories = Array.from(new Set(out.customCategories.concat(local.customCategories || [])));
+            Object.keys(local.plottedBudgets || {}).forEach(function (k) {
+                if (!(k in out.plottedBudgets)) out.plottedBudgets[k] = local.plottedBudgets[k];
+            });
+            return out;
+        }
+
+        function applyRemoteState(newState, rev, clean) {
+            applyingRemote = true;
+            try {
+                state = newState;
+                lastSavedJson = '';
+                saveToLocalStorage();
+                syncMeta.baseRev = rev;
+                if (clean) syncMeta.syncedAt = Date.now();
+                syncMeta.dirty = !clean;
+                writeSyncMeta();
+                updateFilterLabels();
+                renderAllViews();
+            } finally {
+                applyingRemote = false;
+            }
+        }
+
+        function onRemoteDoc(remote, info) {
+            if (!session || session.pending) return;
+            info = info || {};
+
+            if (!remote) {
+                if (syncMeta.baseRev !== 0) { syncMeta.baseRev = 0; writeSyncMeta(); }
+                firstRemoteSeen = true;
+                if (syncMeta.dirty) scheduleSync(info.conflict ? 600 : 0);
+                else setSync(info.fromCache ? (navigator.onLine ? 'syncing' : 'offline') : 'synced');
+                return;
+            }
+
+            const rrev = remote.rev || 0;
+            if (rrev < syncMeta.baseRev) {
+                // Cloud lebih lama dari yang kita kira (mis. data direset): ikuti versi server
+                syncMeta.baseRev = rrev; writeSyncMeta();
+                if (syncMeta.dirty) scheduleSync(600);
+                return;
+            }
+            if (rrev === syncMeta.baseRev || (remote.device === CLIENT_ID && !info.conflict)) {
+                firstRemoteSeen = true;
+                if (syncMeta.dirty) scheduleSync(0);
+                else setSync(info.fromCache ? (navigator.onLine ? 'syncing' : 'offline') : 'synced');
+                return;
+            }
+
+            // Ada versi yang lebih baru di cloud
+            let remoteState;
+            try { remoteState = normalizeState(JSON.parse(remote.data)); }
+            catch (e) { setSync('error', 'Data di cloud tidak terbaca.'); return; }
+
+            const hadData = (state.transactions.length + state.savingsGoals.length) > 0;
+            const before = JSON.stringify(state);
+            if (syncMeta.dirty) {
+                applyRemoteState(mergeStates(remoteState, state, syncMeta.syncedAt), rrev, false);
+                scheduleSync(info.conflict ? 600 : 0);
+                showToast('Perubahan dari beberapa perangkat digabung.', '🔀');
+                setSync('syncing');
+            } else {
+                applyRemoteState(remoteState, rrev, true);
+                if (hadData && JSON.stringify(state) !== before) showToast('Data diperbarui dari perangkat lain.', '☁️');
+                setSync(info.fromCache ? (navigator.onLine ? 'syncing' : 'offline') : 'synced');
+            }
+            firstRemoteSeen = true;
+        }
+
+        let inflight = null;
+
+        function scheduleSync(delay) {
+            clearTimeout(pushTimer);
+            pushTimer = setTimeout(runSync, delay);
+        }
+
+        function runSync() {
+            if (inflight) return inflight;
+            const C = window.IWCloud;
+            if (!session || session.pending || !syncMeta.dirty || !C || !C.configured) return Promise.resolve();
+            if (!navigator.onLine) { setSync('offline'); return Promise.resolve(); }
+            inflight = (async function () {
+                const t0 = Date.now();
+                try {
+                    setSync('syncing');
+                    const dataStr = JSON.stringify(state);
+                    if (dataStr.length > 900000) { setSync('error', 'Data terlalu besar untuk disinkronkan.'); return; }
+                    const res = await C.push(session.uid, syncMeta.baseRev, dataStr, { device: CLIENT_ID, email: session.email });
+                    if (!session) return;
+                    if (res.ok) {
+                        syncMeta.baseRev = res.rev;
+                        syncMeta.syncedAt = t0;
+                        syncMeta.dirty = (JSON.stringify(state) !== dataStr);
+                        writeSyncMeta();
+                        setSync('synced');
+                        if (syncMeta.dirty) scheduleSync(300);
+                    } else {
+                        onRemoteDoc(res.remote, { fromCache: false, conflict: true });
+                    }
+                } catch (e) {
+                    console.warn('Sinkronisasi gagal', e);
+                    const denied = e && e.code === 'permission-denied';
+                    setSync(navigator.onLine ? 'error' : 'offline', denied ? 'Akses ditolak. Periksa aturan keamanan Firestore (lihat PANDUAN-SETUP.md).' : '');
+                    scheduleSync(denied ? 60000 : 15000);
+                } finally {
+                    inflight = null;
+                }
+            })();
+            return inflight;
+        }
+
+        async function syncBeforeLeave(ms) {
+            if (!session || !syncMeta.dirty) return;
+            clearTimeout(pushTimer);
+            await Promise.race([runSync(), new Promise(function (r) { setTimeout(r, ms); })]);
+        }
+
+        function startSync() {
+            const C = window.IWCloud;
+            if (!C || !C.configured || !session || unwatch) return;
+            firstRemoteSeen = false;
+            setSync(navigator.onLine ? 'syncing' : 'offline');
+            try {
+                unwatch = C.watch(session.uid, onRemoteDoc, function (e) {
+                    console.warn('Listener sinkronisasi error', e);
+                    const denied = e && e.code === 'permission-denied';
+                    setSync(navigator.onLine ? 'error' : 'offline', denied ? 'Akses ditolak. Periksa aturan keamanan Firestore (lihat PANDUAN-SETUP.md).' : '');
+                });
+            } catch (e) { setSync('error'); }
+            if (syncMeta.dirty) scheduleSync(800);
+        }
+
+        function stopSync() {
+            clearTimeout(pushTimer);
+            if (unwatch) { try { unwatch(); } catch (e) {} unwatch = null; }
+            setSync('off');
+        }
+
+        async function syncNow() {
+            const C = window.IWCloud;
+            if (!session || !C || !C.configured || session.pending) { showToast('Sinkronisasi belum aktif.', '⚠️'); return; }
+            if (!navigator.onLine) { setSync('offline'); showToast('Kamu sedang offline.', '📴'); return; }
+            setSync('syncing');
+            try {
+                if (syncMeta.dirty) await runSync();
+                else onRemoteDoc(await C.fetchOnce(session.uid), { fromCache: false });
+                if (syncStatus === 'synced') showToast('Data sudah yang terbaru.', '✅');
+            } catch (e) {
+                console.warn(e);
+                setSync('error');
+            }
+        }
+
+        window.addEventListener('online', function () {
+            if (cloudFailed) { showToast('Kamu kembali online. Muat ulang halaman untuk mengaktifkan sinkronisasi.', '🔄'); return; }
+            if (!session) return;
+            if (syncMeta.dirty) scheduleSync(300);
+        });
+        window.addEventListener('offline', function () { if (session) setSync('offline'); });
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' && session && syncMeta.dirty) scheduleSync(500);
+        });
+
+        /* ---------- Favicon dari logo ---------- */
+        function setFaviconFromLogo() {
+            const logo = byId('login-logo');
+            if (!logo) return;
+            try {
+                const svg = new XMLSerializer().serializeToString(logo);
+                let link = document.getElementById('app-favicon');
+                if (!link) {
+                    link = document.createElement('link');
+                    link.id = 'app-favicon';
+                    link.rel = 'icon';
+                    document.head.appendChild(link);
+                }
+                link.type = 'image/svg+xml';
+                link.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+            } catch (e) {}
+        }
+
+
+        /* =====================================================================
+           KATEGORI: pemilih emoji + daftar kategori
+           ===================================================================== */
+        const EMOJI_CHOICES = [
+            '🍔','🍕','🍜','🍙','☕','🧋','🍰','🍿',
+            '🛒','👕','👟','💄','🧴','💊','🏥','🦷',
+            '📚','✏️','🎒','🎓','🎮','🎧','🎬','🎵',
+            '⚽','🏋️','🚌','🛵','🚗','⛽','✈️','📱',
+            '💻','💡','💧','🏠','🎁','🎂','🐶','🐱',
+            '🌱','💰','🏦','🐷','🧾','💳','🎨','📷',
+            '🧹','🛠️','✂️','🧸','🤝','❤️','⭐','🎉'
+        ];
+        const EMOJI_PICKERS = [
+            { box: 'tx-emoji-picker', input: 'custom-cat-emoji' },
+            { box: 'cat-emoji-picker', input: 'cat-new-emoji' }
+        ];
+
+        /* Ambil 1 karakter emoji pertama (aman untuk emoji gabungan seperti 🏋️ atau 👨‍👩‍👧) */
+        function firstGrapheme(str) {
+            str = String(str || '').trim();
+            if (!str) return '';
+            try {
+                if (window.Intl && Intl.Segmenter) {
+                    const first = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(str)[Symbol.iterator]().next();
+                    if (first.value) return first.value.segment;
+                }
+            } catch (e) {}
+            return Array.from(str)[0] || '';
+        }
+
+        function emojiBtnClass(selected) {
+            return 'w-full aspect-square rounded-xl text-lg flex items-center justify-center border transition active:scale-90 ' +
+                (selected ? 'bg-purple-500/30 border-purple-400 ring-1 ring-purple-400/60' : 'bg-white/5 border-white/10 hover:bg-white/15');
+        }
+
+        function markEmoji(pk) {
+            const box = byId(pk.box), input = byId(pk.input);
+            if (!box || !input) return;
+            const cur = firstGrapheme(input.value);
+            box.querySelectorAll('button').forEach(function (b) {
+                const on = b.dataset.emoji === cur;
+                b.className = emojiBtnClass(on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+        }
+
+        function initEmojiPickers() {
+            EMOJI_PICKERS.forEach(function (pk) {
+                const box = byId(pk.box), input = byId(pk.input);
+                if (!box || !input || box.dataset.ready) return;
+                box.dataset.ready = '1';
+                EMOJI_CHOICES.forEach(function (em) {
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.textContent = em;
+                    b.dataset.emoji = em;
+                    b.setAttribute('aria-label', 'Ikon ' + em);
+                    b.onclick = function () { input.value = em; markEmoji(pk); };
+                    box.appendChild(b);
+                });
+                input.addEventListener('input', function () {
+                    const g = firstGrapheme(input.value);
+                    if (input.value !== g) input.value = g;
+                    markEmoji(pk);
+                });
+                markEmoji(pk);
+            });
+        }
+
+        function splitCategory(cat) {
+            const i = String(cat).indexOf(' ');
+            return i === -1 ? { icon: '✨', name: String(cat) } : { icon: cat.slice(0, i), name: cat.slice(i + 1) };
+        }
+
+        let _baseTxOptions = null, _basePlotOptions = null;
+
+        function fillSelect(sel, base, custom, withCustomEntry) {
+            const cur = sel.value;
+            sel.innerHTML = '';
+            const seen = new Set();
+            function add(value, label) {
+                if (seen.has(value)) return;
+                seen.add(value);
+                const o = document.createElement('option');
+                o.value = value; o.textContent = label;
+                sel.appendChild(o);
+            }
+            base.forEach(function (b) { add(b[0], b[1]); });
+            custom.forEach(function (c) { add(c, c); });
+            if (withCustomEntry) add('__CUSTOM__', '➕ Kategori Bebas / Tambah Baru...');
+            if (seen.has(cur)) sel.value = cur;
+        }
+
+        /* Daftar pilihan kategori di form transaksi & plotting ikut menampilkan kategori buatan pengguna */
+        function renderCategoryOptions() {
+            const custom = (state && state.customCategories) || [];
+            const tx = byId('tx-category');
+            if (tx) {
+                if (!_baseTxOptions) _baseTxOptions = [...tx.options].filter(o => o.value !== '__CUSTOM__').map(o => [o.value, o.textContent]);
+                fillSelect(tx, _baseTxOptions, custom, true);
+            }
+            const ps = byId('plotting-category-select');
+            if (ps) {
+                if (!_basePlotOptions) _basePlotOptions = [...ps.options].map(o => [o.value, o.textContent]);
+                fillSelect(ps, _basePlotOptions, custom, false);
+            }
+        }
+
+        function openCategories() {
+            initEmojiPickers();
+            renderCategoryList();
+            openModal('categories-modal');
+        }
+
+        function renderCategoryList() {
+            const list = byId('category-list');
+            if (!list) return;
+            const base = _baseTxOptions || [];
+            const custom = state.customCategories || [];
+            let html = '';
+            function row(cat, label, deletable, idx) {
+                const c = splitCategory(cat);
+                return '<div class="glass-pill rounded-2xl px-3 py-2.5 flex items-center gap-3">' +
+                    '<span class="text-lg w-8 text-center">' + escapeHtml(c.icon) + '</span>' +
+                    '<span class="flex-1 min-w-0 text-xs font-semibold text-white truncate">' + escapeHtml(c.name) + '</span>' +
+                    '<span class="text-[10px] ' + (deletable ? 'text-purple-300' : 'text-slate-500') + '">' + label + '</span>' +
+                    (deletable ? '<button type="button" data-del="' + idx + '" class="p-1.5 rounded-lg hover:bg-rose-500/20 text-rose-400 transition" aria-label="Hapus kategori"><i data-lucide="trash-2" class="w-4 h-4"></i></button>' : '') +
+                    '</div>';
+            }
+            if (custom.length) {
+                html += '<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Kategori Buatanmu</p>';
+                custom.forEach(function (c, i) { html += row(c, 'Milikmu', true, i); });
+            }
+            html += '<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide pt-1">Kategori Bawaan</p>';
+            base.forEach(function (b) { html += row(b[0], 'Bawaan', false, -1); });
+            list.innerHTML = html;
+            list.querySelectorAll('button[data-del]').forEach(function (btn) {
+                btn.onclick = function () { deleteCustomCategory(parseInt(btn.dataset.del, 10)); };
+            });
+            refreshIcons();
+        }
+
+        function addCustomCategory(e) {
+            e.preventDefault();
+            const emoji = firstGrapheme(byId('cat-new-emoji').value) || '🏷️';
+            const name = byId('cat-new-name').value.trim().replace(/\s+/g, ' ');
+            if (!name) { showToast('Isi nama kategorinya dulu ya!', '⚠️'); return; }
+            const all = (_baseTxOptions || []).map(b => b[0]).concat(state.customCategories || []);
+            if (all.some(c => splitCategory(c).name.toLowerCase() === name.toLowerCase())) {
+                showToast('Kategori "' + name + '" sudah ada', '⚠️');
+                return;
+            }
+            state.customCategories.push(emoji + ' ' + name);
+            saveToLocalStorage();
+            byId('cat-new-name').value = '';
+            byId('cat-new-emoji').value = '';
+            markEmoji(EMOJI_PICKERS[1]);
+            renderAllViews();
+            renderCategoryList();
+            showToast('Kategori ' + emoji + ' ' + name + ' ditambahkan', '✅');
+        }
+
+        function deleteCustomCategory(idx) {
+            const cat = (state.customCategories || [])[idx];
+            if (!cat) return;
+            showConfirmModal(
+                'Hapus Kategori',
+                'Kategori "' + cat + '" dihapus dari daftar. Transaksi yang sudah tercatat tidak ikut terhapus.',
+                function () {
+                    state.customCategories = state.customCategories.filter(c => c !== cat);
+                    saveToLocalStorage();
+                    renderAllViews();
+                    renderCategoryList();
+                    showToast('Kategori dihapus', '🗑️');
+                }
+            );
+        }
+
+        /* =====================================================================
+           PWA: pasang di HP, penyimpanan tahan lama, dan offline
+           ===================================================================== */
+        let deferredInstall = null;
+
+        function isStandalone() {
+            return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+        }
+
+        function updateInstallCard() {
+            const card = byId('install-card');
+            if (!card) return;
+            if (isStandalone()) { card.style.display = 'none'; return; }
+            const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            const btn = byId('install-btn'), hint = byId('install-hint');
+            card.style.display = 'block';
+            btn.style.display = deferredInstall ? '' : 'none';
+            hint.textContent = deferredInstall
+                ? 'Pasang agar ikon iWallet muncul di layar utama dan terbuka seperti aplikasi biasa.'
+                : ios
+                    ? 'Di Safari: ketuk tombol Bagikan, lalu pilih "Tambah ke Layar Utama".'
+                    : 'Buka menu browser (titik tiga), lalu pilih "Instal aplikasi" atau "Tambahkan ke layar utama".';
+        }
+
+        async function installApp() {
+            if (!deferredInstall) return;
+            deferredInstall.prompt();
+            try { await deferredInstall.userChoice; } catch (e) {}
+            deferredInstall = null;
+            updateInstallCard();
+        }
+
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferredInstall = e;
+            updateInstallCard();
+        });
+        window.addEventListener('appinstalled', function () {
+            deferredInstall = null;
+            updateInstallCard();
+            showToast('iWallet terpasang di HP-mu!', '📲');
+        });
+
+        /*PWA-JS-START*/
+        function showUpdateBanner() {
+            if (byId('update-banner')) return;
+            const b = document.createElement('div');
+            b.id = 'update-banner';
+            b.setAttribute('role', 'status');
+            b.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-[70] w-[calc(100%-2rem)] max-w-sm glass-modal border border-purple-400/40 rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl';
+            b.innerHTML = '<span class="text-lg">✨</span>' +
+                '<div class="flex-1 min-w-0"><p class="text-xs font-bold text-white">Versi baru tersedia</p>' +
+                '<p class="text-[10px] text-slate-400">Datamu aman. Muat ulang untuk memakai versi terbaru.</p></div>' +
+                '<button type="button" id="update-reload" class="px-3 py-1.5 rounded-xl bg-purple-600 text-[11px] font-bold text-white active:scale-95">Muat ulang</button>';
+            document.body.appendChild(b);
+            byId('update-reload').onclick = function () { flushAll(); location.reload(); };
+        }
+
+        if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+            let hadController = !!navigator.serviceWorker.controller;
+            navigator.serviceWorker.addEventListener('controllerchange', function () {
+                if (!hadController) { hadController = true; return; } // pemasangan pertama, bukan update
+                showUpdateBanner();
+            });
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('sw.js').catch(function (err) { console.warn('Service worker tidak aktif:', err); });
+            });
+        }
+        /*PWA-JS-END*/
+
+        /* Laptop: tombol Esc menutup dialog paling atas */
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            const open = [...document.querySelectorAll('.fixed.inset-0.z-50')].filter(function (m) { return !m.classList.contains('hidden'); });
+            if (open.length) closeModal(open[open.length - 1].id);
+        });
+
+        /* Minta browser agar data aplikasi tidak dihapus otomatis saat ruang penyimpanan menipis */
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().catch(function () {});
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
